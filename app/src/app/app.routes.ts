@@ -8,7 +8,7 @@ export const routes: Routes = [
   {
     path: '',
     component: Shell,
-    canActivate: [authGuard, setupGuard],
+    canActivate: [setupGuard],
     children: [
       { path: '', loadComponent: () => import('./features/today/today').then((m) => m.Today) },
       { path: 'confirm', loadComponent: () => import('./features/confirm/confirm').then((m) => m.Confirm) },
