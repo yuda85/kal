@@ -56,6 +56,7 @@ export interface Workout {
   durationMin: number;
   kcal: number;
   steps?: number;
+  linkId?: string;
 }
 
 export interface Day {

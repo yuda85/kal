@@ -1,5 +1,6 @@
 import { isValidDate, localDate, localTime } from './dates.ts';
 import { computeRecipe, portion } from './recipe.ts';
+import { round1 } from './round.ts';
 import type { Ingredient, Recipe, RecipeYield, Workout } from './types.ts';
 
 export const LINK_VERSION = 1;
@@ -35,6 +36,7 @@ export interface WeightOp {
 
 export interface ActivityOp {
   op: 'activity';
+  id: string;
   date: string;
   steps?: number;
   workouts?: Workout[];
@@ -132,7 +134,7 @@ const KEYS = {
   add: ['op', 'id', 'date', 'time', 'name', 'kcal', 'protein', 'carbs', 'fat', 'recipeId', 'qty'],
   recipe: ['op', 'id', 'name', 'aliases', 'ingredients', 'yield'],
   weight: ['op', 'date', 'kg'],
-  activity: ['op', 'date', 'steps', 'workouts'],
+  activity: ['op', 'id', 'date', 'steps', 'workouts'],
   ingredient: ['name', 'grams', 'per100'],
   per100: ['kcal', 'protein', 'carbs', 'fat'],
   yield: ['units', 'unitName', 'cookedGrams'],
@@ -255,6 +257,7 @@ function checkOp(op: unknown, path: string, errors: string[]): void {
       break;
     case 'activity':
       checkKeys(op, KEYS.activity, path, errors);
+      checkPattern(op, 'id', ID, path, errors);
       checkDate(op, 'date', path, errors);
       checkNumber(op, 'steps', LIMITS.steps, path, errors, true);
       if (op.workouts !== undefined) {
@@ -297,7 +300,8 @@ export function fillDefaults(draft: unknown, now: Date, newId: () => string): un
     ops: draft.ops.map((op) => {
       if (!isObj(op)) return op;
       if (op.op === 'add') return { id: newId(), date, time, ...op };
-      if (op.op === 'weight' || op.op === 'activity') return { date, ...op };
+      if (op.op === 'activity') return { id: newId(), date, ...op };
+      if (op.op === 'weight') return { date, ...op };
       return op;
     }),
   };
@@ -328,8 +332,6 @@ export function recipesInPayload(payload: unknown): Recipe[] {
 export function pendingRecipeIds(payload: unknown): string[] {
   return opsOf(payload).filter(needsNumbers).map((op) => op.recipeId);
 }
-
-const round1 = (x: number): number => Math.round(x * 10) / 10;
 
 export function resolveRecipePortions(payload: unknown, recipes: Recipe[]): unknown {
   if (!isObj(payload) || !Array.isArray(payload.ops)) return payload;

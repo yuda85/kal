@@ -48,7 +48,7 @@ describe('validatePayload', () => {
         add,
         { op: 'recipe', id: 'fish-balls', name: 'קציצות דגים', aliases: ['קציצות'], ingredients: FISH_BALLS, yield: { units: 20, unitName: 'קציצה' } },
         { op: 'weight', date: '2026-09-27', kg: 88.4 },
-        { op: 'activity', date: '2026-09-27', steps: 9200, workouts: [{ type: 'football', durationMin: 60, kcal: 550 }] },
+        { op: 'activity', id: 'act12345', date: '2026-09-27', steps: 9200, workouts: [{ type: 'football', durationMin: 60, kcal: 550 }] },
       ],
     };
     expect(validatePayload(payload)).toEqual(payload);
@@ -82,6 +82,10 @@ describe('validatePayload', () => {
     const bad = [{ name: 'oil', grams: 10, per100: { kcal: 1000, protein: 0, carbs: 0, fat: 100 } }];
     const recipe = { op: 'recipe', id: 'r1', name: 'x', aliases: [], ingredients: bad, yield: { units: 1 } };
     expect(() => validatePayload({ v: 1, ops: [recipe] })).toThrow('per100');
+  });
+
+  it('requires an id on activity ops', () => {
+    expect(() => validatePayload({ v: 1, ops: [{ op: 'activity', date: '2026-09-27', steps: 10 }] })).toThrow('ops[0].id is invalid');
   });
 
   it('rejects an empty op list', () => {
@@ -123,6 +127,11 @@ describe('fillDefaults', () => {
   it('never overwrites a date, time or id that was provided', () => {
     const p = fillDefaults({ ops: [{ op: 'add', id: 'keepme12', date: '2026-09-26', time: '21:00', name: 'אתמול', kcal: 300 }] }, now, () => 'zzzz9999') as Payload;
     expect(p.ops[0]).toMatchObject({ id: 'keepme12', date: '2026-09-26', time: '21:00' });
+  });
+
+  it('gives activity ops an id', () => {
+    const p = fillDefaults({ ops: [{ op: 'activity', steps: 9000 }] }, now, () => 'act99999') as Payload;
+    expect(p.ops[0]).toEqual({ op: 'activity', id: 'act99999', date: '2026-09-27', steps: 9000 });
   });
 
   it('rejects a draft without ops', () => {
