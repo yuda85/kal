@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node .claude/skills/kal/scripts/read.ts:*)",
+      "Bash(node .claude/skills/kal/scripts/link.ts:*)",
+      "Bash(open https://yuda85.github.io/kal/*)"
+    ]
+  }
+}
