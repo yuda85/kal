@@ -32,6 +32,16 @@ describe('QuickAdd', () => {
     expect(repo.applied).toEqual([]);
   });
 
+  it('shows the protocol error instead of throwing for an over-long name', async () => {
+    const { fixture, repo, el } = await open();
+    type(el, 'input[name=name]', 'א'.repeat(101));
+    type(el, 'input[name=kcal]', '500');
+    el.querySelector<HTMLButtonElement>('button.primary')!.click();
+    await fixture.whenStable();
+    expect(el.querySelector('.error')?.textContent).toContain('name');
+    expect(repo.applied).toEqual([]);
+  });
+
   it('saves a meal without waiting for the write', async () => {
     const repo = seededRepository();
     repo.writeMode = 'hang';

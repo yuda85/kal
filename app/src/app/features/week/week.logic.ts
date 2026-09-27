@@ -1,4 +1,5 @@
-import { dateRange, missingDays, summarizeWeek, type WeekInput, type WeekSummary } from '../../domain';
+import { ENTRY_WINDOW_DAYS } from '../../core/kal-state';
+import { addDays, dateRange, missingDays, summarizeWeek, type WeekInput, type WeekSummary } from '../../domain';
 import { dayLetter, shortDate } from '../../shared/format';
 
 export interface WeekView {
@@ -8,6 +9,11 @@ export interface WeekView {
   inKcal: (number | null)[];
   outKcal: (number | null)[];
   missingIdx: number[];
+}
+
+/** Entries older than the loaded window are not in memory, so older weeks would look empty. */
+export function canGoBack(weekStartDate: string, today: string): boolean {
+  return addDays(weekStartDate, -7) >= addDays(today, -ENTRY_WINDOW_DAYS);
 }
 
 export function weekView(input: WeekInput): WeekView {

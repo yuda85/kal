@@ -46,6 +46,33 @@ describe('Confirm', () => {
     expect(el.textContent).toContain('251');
   });
 
+  it('lets the quantity be typed, in grams for cooked-weight recipes', async () => {
+    const { fixture, el } = await open([balls]);
+    const input = el.querySelector<HTMLInputElement>('input[aria-label="כמות"]')!;
+    input.value = '5';
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(el.textContent).toContain('313');
+  });
+
+  it('keeps the list and shows an inline error for an invalid edited value', async () => {
+    const { fixture, repo, el } = await open([shakshuka]);
+    const input = el.querySelector<HTMLInputElement>('input[aria-label="קלוריות"]')!;
+    input.value = '6000';
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    el.querySelector<HTMLButtonElement>('button.primary')!.click();
+    await fixture.whenStable();
+    expect(el.querySelector('.error')?.textContent).toContain('kcal');
+    expect(el.textContent).toContain('שקשוקה');
+    expect(repo.applied).toEqual([]);
+  });
+
+  it('previews all four macro bars', async () => {
+    const { el } = await open([shakshuka]);
+    expect(el.querySelectorAll('.preview app-bullet-bar')).toHaveLength(4);
+  });
+
   it('warns when protein would pass the cap', async () => {
     const { el } = await open([{ ...shakshuka, protein: 111 } as Op]);
     expect(el.textContent).toContain('מעל התקרה');

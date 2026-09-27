@@ -36,11 +36,11 @@ import { describeOp } from './confirm.logic';
                 <div class="row qty">
                   <span class="muted small">כמות</span>
                   <button type="button" aria-label="פחות" (click)="changeQty(i, -1)"><svg lucideMinus [size]="16"></svg></button>
-                  <span class="num">{{ fmt(op.qty, 1) }}</span>
+                  <input class="num qty-input" type="number" inputmode="decimal" aria-label="כמות" [value]="op.qty" (change)="setQty(i, $any($event.target).value)" />
                   <button type="button" aria-label="יותר" (click)="changeQty(i, 1)"><svg lucidePlus [size]="16"></svg></button>
                 </div>
               } @else {
-                <label>קלוריות<input type="number" inputmode="decimal" [value]="op.kcal" (change)="setKcal(i, $any($event.target).value)" /></label>
+                <label>קלוריות<input type="number" inputmode="decimal" aria-label="קלוריות" [value]="op.kcal" (change)="setKcal(i, $any($event.target).value)" /></label>
               }
             </article>
           } @else {
@@ -54,12 +54,17 @@ import { describeOp } from './confirm.logic';
           <div class="muted small">אחרי השמירה</div>
           <app-bullet-bar label="קלוריות" [value]="p.intake.kcal" [target]="p.targetKcal" [max]="p.macros.kcal.max" tone="out" />
           <app-bullet-bar label="חלבון" unit="g" [value]="p.intake.protein" [target]="p.macros.protein.target" [max]="p.macros.protein.max" tone="in" />
+          <app-bullet-bar label="פחמימות" unit="g" [value]="p.intake.carbs" [max]="p.macros.carbs.max" />
+          <app-bullet-bar label="שומן" unit="g" [value]="p.intake.fat" [max]="p.macros.fat.max" />
           @for (w of p.warnings; track $index) {
             <div class="alert warning">{{ warningText(w) }}</div>
           }
         </section>
       }
 
+      @if (saveError(); as e) {
+        <p class="error" role="alert">{{ e }}</p>
+      }
       <div class="row actions">
         <button type="button" class="primary" (click)="save()">שמירה</button>
         <button type="button" (click)="cancel()">ביטול</button>
@@ -68,6 +73,7 @@ import { describeOp } from './confirm.logic';
   `,
   styles: `
     .qty { justify-content: flex-start; }
+    .qty-input { width: 88px; text-align: center; }
     .preview { margin-block: 16px; }
     .actions button.primary { flex: 1; }
   `,
@@ -83,6 +89,7 @@ export class Confirm {
   protected readonly warningText = warningText;
 
   protected readonly error = signal<string | null>(null);
+  protected readonly saveError = signal<string | null>(null);
   protected readonly ops = signal<Op[]>([]);
 
   constructor() {
@@ -117,19 +124,33 @@ export class Confirm {
     return describeOp(op, this.allRecipes());
   }
 
+  private recipeFor(op: AddOp) {
+    return this.allRecipes().find((r) => r.id === op.recipeId);
+  }
+
   protected changeQty(index: number, delta: number): void {
-    this.ops.update((ops) =>
-      ops.map((op, i) => {
-        if (i !== index || op.op !== 'add') return op;
-        const qty = Math.max(1, (op.qty ?? 1) + delta);
-        return rescaleAdd(op, this.allRecipes().find((r) => r.id === op.recipeId), qty);
-      }),
-    );
+    const op = this.ops()[index];
+    if (op?.op !== 'add') return;
+    const recipe = this.recipeFor(op);
+    const step = recipe && !recipe.yield.units ? 10 : 1; // cooked-weight recipes count grams
+    this.applyQty(index, (op.qty ?? 1) + delta * step);
+  }
+
+  protected setQty(index: number, raw: string): void {
+    const qty = num(raw);
+    if (qty !== null) this.applyQty(index, qty);
+  }
+
+  private applyQty(index: number, qty: number): void {
+    if (qty < 0.1) return;
+    this.saveError.set(null);
+    this.ops.update((ops) => ops.map((op, i) => (i === index && op.op === 'add' ? rescaleAdd(op, this.recipeFor(op), qty) : op)));
   }
 
   protected setKcal(index: number, raw: string): void {
     const kcal = num(raw);
     if (kcal === null) return;
+    this.saveError.set(null);
     this.ops.update((ops) => ops.map((op, i) => (i === index && op.op === 'add' ? ({ ...op, kcal } as AddOp) : op)));
   }
 
@@ -140,7 +161,7 @@ export class Confirm {
     try {
       payload = validatePayload({ v: 1, ops: this.ops() });
     } catch (e) {
-      this.error.set(e instanceof Error ? e.message : String(e));
+      this.saveError.set(`ערך לא תקין: ${e instanceof Error ? e.message : String(e)}`);
       return;
     }
     const writes = planWrites(payload, { source: 'link', time: localTime(this.state.now()) });

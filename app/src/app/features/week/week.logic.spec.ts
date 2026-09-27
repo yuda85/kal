@@ -1,5 +1,13 @@
 import { makeEntry, testGoal, testProfile } from '../../../../../domain/testing.ts';
-import { weekView } from './week.logic';
+import { canGoBack, weekView } from './week.logic';
+
+describe('canGoBack', () => {
+  it('stops at the start of the loaded 90-day window', () => {
+    expect(canGoBack('2026-09-27', '2026-09-30')).toBe(true);
+    expect(canGoBack('2026-07-12', '2026-09-30')).toBe(true);
+    expect(canGoBack('2026-07-05', '2026-09-30')).toBe(false);
+  });
+});
 
 describe('weekView', () => {
   const entries = [

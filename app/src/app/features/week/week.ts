@@ -5,7 +5,7 @@ import { KalState } from '../../core/kal-state';
 import { addDays } from '../../domain';
 import { fontsReady, weekChart } from '../../shared/charts';
 import { fmt, shortDate } from '../../shared/format';
-import { weekView, type WeekView } from './week.logic';
+import { canGoBack, weekView, type WeekView } from './week.logic';
 
 @Component({
   selector: 'app-week',
@@ -13,7 +13,7 @@ import { weekView, type WeekView } from './week.logic';
   template: `
     @if (view(); as v) {
       <header class="row">
-        <button type="button" aria-label="שבוע קודם" (click)="shift(-7)"><svg lucideChevronRight [size]="18"></svg></button>
+        <button type="button" aria-label="שבוע קודם" [disabled]="!canGoBack(v.summary.start, today())" (click)="shift(-7)"><svg lucideChevronRight [size]="18"></svg></button>
         <h2><span class="num">{{ shortDate(v.summary.start) }}–{{ shortDate(v.summary.end) }}</span></h2>
         <button type="button" aria-label="שבוע הבא" [disabled]="v.summary.end >= today()" (click)="shift(7)"><svg lucideChevronLeft [size]="18"></svg></button>
       </header>
@@ -59,6 +59,7 @@ export class Week {
   protected readonly fmt = fmt;
   protected readonly shortDate = shortDate;
   protected readonly today = this.state.today;
+  protected readonly canGoBack = canGoBack;
   private readonly weekDate = signal(this.state.today());
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('chart');
   private chart: Chart | undefined;

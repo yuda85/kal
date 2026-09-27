@@ -25,7 +25,7 @@ import { QuickAddService, type QuickAddTab } from './quick-add.service';
 
       @switch (quickAdd.tab()) {
         @case ('meal') {
-          <label>שם (לא חובה)<input name="name" [value]="meal().name" (input)="patchMeal('name', $any($event.target).value)" /></label>
+          <label>שם (לא חובה)<input name="name" maxlength="100" [value]="meal().name" (input)="patchMeal('name', $any($event.target).value)" /></label>
           <label>קלוריות<input name="kcal" type="number" inputmode="decimal" [value]="meal().kcal ?? ''" (input)="patchMeal('kcal', num($any($event.target).value))" /></label>
           @if (showMacros()) {
             <div class="grid">
@@ -42,7 +42,7 @@ import { QuickAddService, type QuickAddTab } from './quick-add.service';
         }
         @case ('activity') {
           <label>צעדים<input name="steps" type="number" inputmode="numeric" [value]="activity().steps ?? ''" (input)="patchActivity('steps', num($any($event.target).value))" /></label>
-          <label>סוג אימון<input name="type" [value]="activity().type" (input)="patchActivity('type', $any($event.target).value)" /></label>
+          <label>סוג אימון<input name="type" maxlength="40" [value]="activity().type" (input)="patchActivity('type', $any($event.target).value)" /></label>
           <div class="grid">
             <label>דקות<input name="minutes" type="number" inputmode="numeric" [value]="activity().minutes ?? ''" (input)="patchActivity('minutes', num($any($event.target).value))" /></label>
             <label>קלוריות<input name="workoutKcal" type="number" inputmode="decimal" [value]="activity().kcal ?? ''" (input)="patchActivity('kcal', num($any($event.target).value))" /></label>
@@ -133,7 +133,13 @@ export class QuickAdd {
     }
     this.error.set(error);
     if (error || !payload) return;
-    const writes = planWrites(validatePayload(payload), { source: 'form', time: localTime(now) });
+    let writes;
+    try {
+      writes = planWrites(validatePayload(payload), { source: 'form', time: localTime(now) });
+    } catch (e) {
+      this.error.set(e instanceof Error ? e.message : String(e));
+      return;
+    }
     this.finish(this.repo.applyWrites(uid, writes, this.state.days()));
   }
 

@@ -28,7 +28,7 @@ import { STATUS_TEXT, weightView, type WeightView } from './weight.logic';
       @if (v.gap; as g) {
         <section class="card gap">
           <div class="row"><span>בדיקת דיווח · <span class="num">{{ gapDays(g.from, g.to) }}</span> ימים</span>
-            <span [class.error]="g.alert">{{ g.alert ? 'פער' : 'תקין' }}</span></div>
+            <span [class.error]="g.alert">{{ g.incompleteDays > 0 ? 'לא נבדק' : g.alert ? 'פער' : 'תקין' }}</span></div>
           @if (g.incompleteDays > 0) {
             <div class="muted small">חסרים <span class="num">{{ g.incompleteDays }}</span> ימים מלאים, אי אפשר לבדוק את הדיוק.</div>
           } @else {

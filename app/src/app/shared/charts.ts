@@ -28,7 +28,8 @@ function token(name: string, fallback: string): string {
 
 export async function fontsReady(): Promise<void> {
   if (!('fonts' in document)) return;
-  await Promise.all(['400', '500'].map((w) => document.fonts.load(`${w} 12px "Heebo Variable"`)));
+  // Sample text with Hebrew and digits, so the Hebrew and Latin subsets both load before drawing.
+  await Promise.all(['400', '500'].map((w) => document.fonts.load(`${w} 12px "Heebo Variable"`, 'אב 0123')));
 }
 
 function missingDaysOutline(missing: readonly number[], color: string): Plugin<'bar'> {
