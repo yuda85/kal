@@ -1,0 +1,66 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { NOW, seededRepository, type FakeRepository } from '../../../testing/fake-repository';
+import { KalState } from '../../core/kal-state';
+import { LinkIntake } from '../../core/link-intake';
+import { KalRepository } from '../../core/repository';
+import { Toast } from '../../core/toast';
+import { encodePayload, type Op } from '../../domain';
+import { Confirm } from './confirm';
+
+async function open(ops: Op[] | string, repo: FakeRepository = seededRepository()) {
+  TestBed.configureTestingModule({ imports: [Confirm], providers: [provideRouter([]), { provide: KalRepository, useValue: repo }] });
+  const state = TestBed.inject(KalState);
+  state.now.set(NOW);
+  state.start('u1');
+  TestBed.inject(LinkIntake).pending.set(typeof ops === 'string' ? ops : encodePayload({ v: 1, ops }));
+  const fixture = TestBed.createComponent(Confirm);
+  await fixture.whenStable();
+  return { fixture, repo, el: fixture.nativeElement as HTMLElement };
+}
+
+const shakshuka: Op = { op: 'add', id: 'abcd1234', date: '2026-09-27', time: '13:10', name: 'שקשוקה', kcal: 420, protein: 22 };
+const balls: Op = { op: 'add', id: 'efgh5678', date: '2026-09-27', time: '13:15', name: '3 קציצות', kcal: 188, protein: 18.1, carbs: 10.9, fat: 7.8, recipeId: 'fish-balls', qty: 3 };
+
+describe('Confirm', () => {
+  it('lists the items with their numbers', async () => {
+    const { el } = await open([shakshuka]);
+    expect(el.textContent).toContain('שקשוקה');
+    expect(el.textContent).toContain('420');
+  });
+
+  it('shows an invalid-link screen for a broken payload', async () => {
+    const { el } = await open('bm90IGpzb24');
+    expect(el.textContent).toContain('קישור לא תקין');
+  });
+
+  it('marks an entry that is already saved', async () => {
+    const { el } = await open([{ ...shakshuka, id: 'seed0001' } as Op]);
+    expect(el.textContent).toContain('כבר נשמר');
+  });
+
+  it('recomputes a recipe entry when the quantity changes', async () => {
+    const { fixture, el } = await open([balls]);
+    el.querySelector<HTMLButtonElement>('button[aria-label="יותר"]')!.click();
+    await fixture.whenStable();
+    expect(el.textContent).toContain('251');
+  });
+
+  it('warns when protein would pass the cap', async () => {
+    const { el } = await open([{ ...shakshuka, protein: 111 } as Op]);
+    expect(el.textContent).toContain('מעל התקרה');
+  });
+
+  it('saves without waiting for the write and clears the link', async () => {
+    const repo = seededRepository();
+    repo.writeMode = 'hang';
+    const { fixture, el } = await open([shakshuka, { op: 'weight', date: '2026-09-27', kg: 88.4 }], repo);
+    el.querySelector<HTMLButtonElement>('button.primary')!.click();
+    await fixture.whenStable();
+    expect(repo.applied).toHaveLength(1);
+    expect(repo.applied[0].writes.entries[0]).toMatchObject({ id: 'abcd1234', source: 'link' });
+    expect(repo.applied[0].writes.weights).toHaveLength(1);
+    expect(TestBed.inject(LinkIntake).pending()).toBeNull();
+    expect(TestBed.inject(Toast).message()).toBe('נשמר');
+  });
+});
