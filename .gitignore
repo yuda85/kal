@@ -6,3 +6,5 @@ firebase-debug.log*
 firestore-debug.log*
 ruvector.db
 .DS_Store
+agentdb.rvf
+agentdb.rvf.lock

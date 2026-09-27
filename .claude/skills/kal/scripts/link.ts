@@ -8,6 +8,7 @@ import {
   recipesInPayload,
   resolveRecipePortions,
   validatePayload,
+  type AddOp,
 } from '../../../../domain/index.ts';
 import { loadConfig, requireFirestore } from './lib/config.ts';
 import { createFirestoreReader } from './lib/firestore.ts';
@@ -31,6 +32,12 @@ try {
   const payload = validatePayload(resolveRecipePortions(filled, [...local, ...saved]));
   const url = buildUrl(cfg.baseUrl, payload);
   console.log(url);
+
+  // Second line: the resolved numbers, so the reply matches the link exactly.
+  const items = payload.ops
+    .filter((op): op is AddOp => op.op === 'add')
+    .map(({ name, kcal, protein, carbs, fat, date, time }) => ({ name, kcal, protein, carbs, fat, date, time }));
+  console.log(JSON.stringify({ items, totalKcal: items.reduce((sum, i) => sum + i.kcal, 0) }));
 
   if (open) {
     const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
