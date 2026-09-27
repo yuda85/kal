@@ -56,7 +56,7 @@ async function profile(deps: Deps, today: string) {
     plannedKg,
     status: planStatus(trendKg, plannedKg),
     eta: eta(series, d.goal, today),
-    reportGap: reportGap({ today, goal: d.goal, energy, series }),
+    reportGap: reportGap({ today, goal: d.goal, energy, series, lowDayThresholdKcal: d.profile.settings.lowDayThresholdKcal }),
   };
 }
 
@@ -73,7 +73,13 @@ async function week(deps: Deps, date: string, today: string) {
       protein: s.intake.protein,
       entries: s.entries.length,
     })),
-    missingDays: missingDays(w.start, w.end, today, d.entries, d.profile.settings.lowDayThresholdKcal),
+    missingDays: missingDays(
+      w.start > d.goal.startDate ? w.start : d.goal.startDate,
+      w.end,
+      today,
+      d.entries,
+      d.profile.settings.lowDayThresholdKcal,
+    ),
   };
 }
 
@@ -81,7 +87,7 @@ async function recipes(deps: Deps, today: string) {
   const d = await loadData(deps.reader, today, today);
   return d.recipes.map((r) => {
     const numbers = computeRecipe(r.ingredients, r.yield);
-    return { id: r.id, name: r.name, aliases: r.aliases, yield: r.yield, perUnit: numbers.perUnit, per100g: numbers.per100g };
+    return { id: r.id, name: r.name, aliases: r.aliases, ingredients: r.ingredients, yield: r.yield, perUnit: numbers.perUnit, per100g: numbers.per100g };
   });
 }
 

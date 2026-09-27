@@ -9,7 +9,8 @@ export const ETA_WINDOW_DAYS = 28;
 export const ETA_MIN_POINTS = 14;
 
 export function plannedWeight(goal: Goal, date: string): number {
-  return goal.startWeightKg - (goal.paceKgPerWeek * daysBetween(goal.startDate, date)) / 7;
+  const planned = goal.startWeightKg - (goal.paceKgPerWeek * daysBetween(goal.startDate, date)) / 7;
+  return Math.min(goal.startWeightKg, Math.max(goal.targetWeightKg, planned));
 }
 
 export function planStatus(trendKg: number, plannedKg: number): PlanStatus {

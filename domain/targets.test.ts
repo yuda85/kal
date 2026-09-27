@@ -43,6 +43,10 @@ describe('macroTargets', () => {
     expect(macroTargets(85, {})).toEqual({ protein: 153, carbs: null, fat: null });
   });
 
+  it('raises protein to the constraint min', () => {
+    expect(macroTargets(85, { protein: { min: 160 } }).protein).toBe(160);
+  });
+
   it('caps protein at the constraint max', () => {
     expect(macroTargets(85, { protein: { max: 120 } }).protein).toBe(120);
     expect(macroTargets(60, { protein: { max: 120 } }).protein).toBeCloseTo(108, 10);

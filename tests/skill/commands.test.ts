@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { run } from '../../.claude/skills/kal/scripts/lib/commands.ts';
+import { FISH_BALLS, testGoal } from '../../domain/testing.ts';
 import { fakeReader } from './fake-reader.ts';
 
 const now = new Date('2026-09-27T10:00:00Z');
@@ -35,11 +36,19 @@ describe('read commands', () => {
     expect(out.reportGap).toBeNull();
   });
 
-  it('recipes: returns per-unit numbers', async () => {
+  it('recipes: returns per-unit numbers and the saved ingredients', async () => {
     const out = (await run(['recipes'], { reader: fakeReader(), now })) as any[];
     expect(out[0].id).toBe('fish-balls');
     expect(out[0].perUnit.kcal).toBeCloseTo(62.66, 6);
     expect(out[0].per100g).toBeNull();
+    expect(out[0].ingredients).toEqual(FISH_BALLS);
+  });
+
+  it('week: never lists days before the goal started as missing', async () => {
+    const { id: _id, ...goalData } = testGoal;
+    const reader = fakeReader({ goals: [{ id: 'g1', data: { ...goalData, startDate: '2026-09-29' } }] });
+    const out = (await run(['week', '2026-09-27'], { reader, now: new Date('2026-10-01T10:00:00Z') })) as any;
+    expect(out.missingDays).toEqual(['2026-09-29', '2026-09-30']);
   });
 
   it('rejects unknown commands and invalid dates', async () => {

@@ -127,6 +127,24 @@ export function payloadParam(hash: string): string | null {
 
 // ---------- validation ----------
 
+const KEYS = {
+  payload: ['v', 'ops'],
+  add: ['op', 'id', 'date', 'time', 'name', 'kcal', 'protein', 'carbs', 'fat', 'recipeId', 'qty'],
+  recipe: ['op', 'id', 'name', 'aliases', 'ingredients', 'yield'],
+  weight: ['op', 'date', 'kg'],
+  activity: ['op', 'date', 'steps', 'workouts'],
+  ingredient: ['name', 'grams', 'per100'],
+  per100: ['kcal', 'protein', 'carbs', 'fat'],
+  yield: ['units', 'unitName', 'cookedGrams'],
+  workout: ['type', 'durationMin', 'kcal', 'steps'],
+} as const;
+
+function checkKeys(o: Obj, allowed: readonly string[], path: string, errors: string[]): void {
+  for (const key of Object.keys(o)) {
+    if (!allowed.includes(key)) errors.push(`${path ? `${path}.` : ''}${key} is not a known field`);
+  }
+}
+
 function checkNumber(o: Obj, key: string, [min, max]: Limit, path: string, errors: string[], optional = false): void {
   const v = o[key];
   if (v === undefined && optional) return;
@@ -159,6 +177,7 @@ function checkWorkout(w: unknown, path: string, errors: string[]): void {
     errors.push(`${path} must be an object`);
     return;
   }
+  checkKeys(w, KEYS.workout, path, errors);
   checkName(w, 'type', path, errors, 40);
   checkNumber(w, 'durationMin', LIMITS.durationMin, path, errors);
   checkNumber(w, 'kcal', LIMITS.workoutKcal, path, errors);
@@ -170,12 +189,14 @@ function checkIngredient(i: unknown, path: string, errors: string[]): void {
     errors.push(`${path} must be an object`);
     return;
   }
+  checkKeys(i, KEYS.ingredient, path, errors);
   checkName(i, 'name', path, errors);
   checkNumber(i, 'grams', LIMITS.grams, path, errors);
   if (!isObj(i.per100)) {
     errors.push(`${path}.per100 must be an object`);
     return;
   }
+  checkKeys(i.per100, KEYS.per100, `${path}.per100`, errors);
   checkNumber(i.per100, 'kcal', LIMITS.per100Kcal, `${path}.per100`, errors);
   for (const k of ['protein', 'carbs', 'fat']) checkNumber(i.per100, k, LIMITS.per100G, `${path}.per100`, errors);
 }
@@ -185,6 +206,7 @@ function checkYield(y: unknown, path: string, errors: string[]): void {
     errors.push(`${path} must be an object`);
     return;
   }
+  checkKeys(y, KEYS.yield, path, errors);
   checkNumber(y, 'units', LIMITS.units, path, errors, true);
   checkNumber(y, 'cookedGrams', LIMITS.cookedGrams, path, errors, true);
   checkName(y, 'unitName', path, errors, 30, true);
@@ -198,6 +220,7 @@ function checkOp(op: unknown, path: string, errors: string[]): void {
   }
   switch (op.op) {
     case 'add':
+      checkKeys(op, KEYS.add, path, errors);
       checkPattern(op, 'id', ID, path, errors);
       checkDate(op, 'date', path, errors);
       checkPattern(op, 'time', TIME, path, errors);
@@ -208,6 +231,7 @@ function checkOp(op: unknown, path: string, errors: string[]): void {
       checkNumber(op, 'qty', LIMITS.qty, path, errors, true);
       break;
     case 'recipe':
+      checkKeys(op, KEYS.recipe, path, errors);
       checkPattern(op, 'id', SLUG, path, errors);
       checkName(op, 'name', path, errors);
       if (
@@ -225,10 +249,12 @@ function checkOp(op: unknown, path: string, errors: string[]): void {
       checkYield(op.yield, `${path}.yield`, errors);
       break;
     case 'weight':
+      checkKeys(op, KEYS.weight, path, errors);
       checkDate(op, 'date', path, errors);
       checkNumber(op, 'kg', LIMITS.kg, path, errors);
       break;
     case 'activity':
+      checkKeys(op, KEYS.activity, path, errors);
       checkDate(op, 'date', path, errors);
       checkNumber(op, 'steps', LIMITS.steps, path, errors, true);
       if (op.workouts !== undefined) {
@@ -249,9 +275,10 @@ export function validatePayload(raw: unknown): Payload {
     throw new LinkError('ops must be an array of 1-30 items');
   }
   const errors: string[] = [];
+  checkKeys(raw, KEYS.payload, '', errors);
   raw.ops.forEach((op, i) => checkOp(op, `ops[${i}]`, errors));
   if (errors.length > 0) throw new LinkError(errors.join('; '));
-  return raw as unknown as Payload;
+  return structuredClone(raw) as unknown as Payload;
 }
 
 // ---------- defaults ----------

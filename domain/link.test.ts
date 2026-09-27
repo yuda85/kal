@@ -87,6 +87,27 @@ describe('validatePayload', () => {
   it('rejects an empty op list', () => {
     expect(() => validatePayload({ v: 1, ops: [] })).toThrow('ops');
   });
+
+  it('rejects unknown fields by name so typos cannot silently drop data', () => {
+    expect(() => validatePayload({ v: 1, ops: [{ ...add, carb: 5 }] })).toThrow('ops[0].carb is not a known field');
+    expect(() => validatePayload({ v: 1, ops: [add], extra: true })).toThrow('extra is not a known field');
+    const typoIngredient = [{ name: 'oil', grams: 10, per100: { kcal: 884, protein: 0, carbs: 0, fat: 100, fibre: 0 } }];
+    const recipe = { op: 'recipe', id: 'r1', name: 'x', aliases: [], ingredients: typoIngredient, yield: { units: 1 } };
+    expect(() => validatePayload({ v: 1, ops: [recipe] })).toThrow('per100.fibre is not a known field');
+  });
+
+  it('rejects a __proto__ key coming from JSON', () => {
+    const raw = JSON.parse('{"v":1,"ops":[{"op":"weight","date":"2026-09-27","kg":80,"__proto__":{"x":1}}]}');
+    expect(() => validatePayload(raw)).toThrow('__proto__ is not a known field');
+  });
+
+  it('returns a fresh copy, not the input object', () => {
+    const input = { v: 1, ops: [{ ...add }] };
+    const out = validatePayload(input);
+    expect(out).toEqual(input);
+    expect(out).not.toBe(input);
+    expect(out.ops[0]).not.toBe(input.ops[0]);
+  });
 });
 
 describe('fillDefaults', () => {

@@ -51,6 +51,21 @@ describe('summarizeDay', () => {
     expect(w.warnings).toContainEqual({ code: 'below_bmr', value: 1792.5 * 1.55 - 1500, limit: 1792.5 });
   });
 
+  it('does not warn below BMR on an active day when the goal itself is moderate', () => {
+    const light: Day = { date, garmin: { steps: 5000, workouts: [] } };
+    const w = summarizeDay({ date, entries: [], day: light, profile: testProfile, goal: testGoal, weighIns });
+    expect(w.warnings.filter((x) => x.code === 'below_bmr')).toEqual([]);
+  });
+
+  it('keeps the calorie target inside the kcal constraint', () => {
+    const withMin = { ...testProfile, constraints: { ...testProfile.constraints, kcal: { min: 2200 } } };
+    expect(summarizeDay({ date, entries, day, profile: withMin, goal: testGoal, weighIns }).targetKcal).toBe(2200);
+    const withMax = { ...testProfile, constraints: { ...testProfile.constraints, kcal: { max: 1800 } } };
+    const capped = summarizeDay({ date, entries, day, profile: withMax, goal: testGoal, weighIns });
+    expect(capped.targetKcal).toBe(1800);
+    expect(capped.remainingKcal).toBe(1800 - 1270);
+  });
+
   it('falls back to the goal start weight when there are no weigh-ins', () => {
     const w = summarizeDay({ date, entries: [], day, profile: testProfile, goal: testGoal, weighIns: [] });
     expect(w.trendKg).toBe(90);
@@ -92,10 +107,43 @@ describe('summarizeWeek', () => {
     expect(w.avgDeficitKcal).toBeCloseTo(w.avgOutKcal! - w.avgInKcal!, 6);
   });
 
-  it('compares the trend change with the plan', () => {
+  it('compares the trend change with the plan prorated to the elapsed days', () => {
     expect(w.trendChangeKg).toBeCloseTo(-0.088, 6);
-    expect(w.plannedChangeKg).toBe(-0.45);
+    // Saturday 09-26 → Wednesday 09-30 is 4 days of plan
+    expect(w.plannedChangeKg).toBeCloseTo((-0.45 * 4) / 7, 10);
     expect(w.targetDeficitKcal).toBe(495);
+  });
+
+  it('uses the full weekly plan for a finished week', () => {
+    const past = summarizeWeek({ date: '2026-09-20', today: '2026-09-30', entries: [], days: [], profile: testProfile, goal: testGoal, weighIns: weekWeighIns });
+    expect(past.plannedChangeKg).toBeCloseTo(-0.45, 10);
+  });
+
+  it('does not count under-logged days in the averages', () => {
+    const partial = summarizeWeek({
+      date: '2026-09-30',
+      today: '2026-09-30',
+      entries: [...weekEntries, makeEntry({ date: '2026-09-29', kcal: 300 })],
+      days: [],
+      profile: testProfile,
+      goal: testGoal,
+      weighIns: weekWeighIns,
+    });
+    expect(partial.daysLogged).toBe(2);
+    expect(partial.avgInKcal).toBe(1900);
+  });
+
+  it('reports no trend change for a week without weigh-ins', () => {
+    const noWeights = summarizeWeek({
+      date: '2026-09-30',
+      today: '2026-09-30',
+      entries: weekEntries,
+      days: [],
+      profile: testProfile,
+      goal: testGoal,
+      weighIns: [{ date: '2026-09-20', kg: 86 }, { date: '2026-09-25', kg: 85.5 }],
+    });
+    expect(noWeights.trendChangeKg).toBeNull();
   });
 
   it('returns null averages when nothing is logged', () => {

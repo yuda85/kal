@@ -28,7 +28,7 @@ describe('reportGap', () => {
 
   it('reports no gap when weight follows the logs', () => {
     const series = [{ date: '2026-09-12', kg: 85 }, { date: '2026-09-26', kg: 84 }];
-    const r = reportGap({ today: '2026-09-27', goal, energy, series });
+    const r = reportGap({ today: '2026-09-27', goal, energy, series, lowDayThresholdKcal: 800 });
     expect(r).toMatchObject({ from: '2026-09-13', to: '2026-09-26', alert: false });
     expect(r!.expectedChangeKg).toBeCloseTo(-1, 10);
     expect(r!.actualChangeKg).toBeCloseTo(-1, 10);
@@ -37,23 +37,32 @@ describe('reportGap', () => {
 
   it('alerts when weight drops much less than the logs predict', () => {
     const series = [{ date: '2026-09-12', kg: 85 }, { date: '2026-09-26', kg: 84.6 }];
-    const r = reportGap({ today: '2026-09-27', goal, energy, series });
+    const r = reportGap({ today: '2026-09-27', goal, energy, series, lowDayThresholdKcal: 800 });
     expect(r!.gapKcalPerDay).toBeCloseTo(330, 6);
+    expect(r!.incompleteDays).toBe(0);
     expect(r!.alert).toBe(true);
+  });
+
+  it('does not alert when days in the window were not logged', () => {
+    const series = [{ date: '2026-09-12', kg: 85 }, { date: '2026-09-26', kg: 84.6 }];
+    const gappy = energy.map((e, i) => (i < 2 ? { ...e, inKcal: 0 } : e));
+    const r = reportGap({ today: '2026-09-27', goal, energy: gappy, series, lowDayThresholdKcal: 800 });
+    expect(r!.incompleteDays).toBe(2);
+    expect(r!.alert).toBe(false);
   });
 
   it('skips the first two weeks of the goal', () => {
     const early = { ...testGoal, startDate: '2026-09-10' };
-    expect(reportGap({ today: '2026-09-27', goal: early, energy, series: [{ date: '2026-09-01', kg: 85 }] })).toBeNull();
+    expect(reportGap({ today: '2026-09-27', goal: early, energy, series: [{ date: '2026-09-01', kg: 85 }], lowDayThresholdKcal: 800 })).toBeNull();
   });
 
   it('returns null without a trend before the window', () => {
-    expect(reportGap({ today: '2026-09-27', goal, energy, series: [] })).toBeNull();
-    expect(reportGap({ today: '2026-09-27', goal, energy, series: [{ date: '2026-09-20', kg: 85 }] })).toBeNull();
+    expect(reportGap({ today: '2026-09-27', goal, energy, series: [], lowDayThresholdKcal: 800 })).toBeNull();
+    expect(reportGap({ today: '2026-09-27', goal, energy, series: [{ date: '2026-09-20', kg: 85 }], lowDayThresholdKcal: 800 })).toBeNull();
   });
 
   it('returns null when a day in the window has no energy data', () => {
     const series = [{ date: '2026-09-12', kg: 85 }, { date: '2026-09-26', kg: 84 }];
-    expect(reportGap({ today: '2026-09-27', goal, energy: energy.slice(1), series })).toBeNull();
+    expect(reportGap({ today: '2026-09-27', goal, energy: energy.slice(1), series, lowDayThresholdKcal: 800 })).toBeNull();
   });
 });

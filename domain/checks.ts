@@ -31,10 +31,19 @@ export interface ReportGap {
   expectedChangeKg: number;
   actualChangeKg: number;
   gapKcalPerDay: number;
+  incompleteDays: number;
   alert: boolean;
 }
 
-export function reportGap(input: { today: string; goal: Goal; energy: DayEnergy[]; series: TrendPoint[] }): ReportGap | null {
+export interface ReportGapInput {
+  today: string;
+  goal: Goal;
+  energy: DayEnergy[];
+  series: TrendPoint[];
+  lowDayThresholdKcal: number;
+}
+
+export function reportGap(input: ReportGapInput): ReportGap | null {
   const to = addDays(input.today, -1);
   const windowStart = addDays(input.today, -GAP_WINDOW_DAYS);
   const earliest = addDays(input.goal.startDate, GAP_SKIP_DAYS);
@@ -48,14 +57,18 @@ export function reportGap(input: { today: string; goal: Goal; energy: DayEnergy[
 
   const energyByDate = new Map(input.energy.map((e) => [e.date, e]));
   let net = 0;
+  let incompleteDays = 0;
   for (const date of dateRange(from, to)) {
     const e = energyByDate.get(date);
     if (!e) return null;
     net += e.inKcal - e.outKcal;
+    if (e.inKcal < input.lowDayThresholdKcal) incompleteDays += 1;
   }
 
   const expectedChangeKg = net / KCAL_PER_KG;
   const actualChangeKg = trendEnd - trendStart;
   const gapKcalPerDay = ((actualChangeKg - expectedChangeKg) * KCAL_PER_KG) / days;
-  return { from, to, expectedChangeKg, actualChangeKg, gapKcalPerDay, alert: gapKcalPerDay > GAP_ALERT_KCAL };
+  // Unlogged days are already reported by missingDays; alert only on fully logged windows.
+  const alert = incompleteDays === 0 && gapKcalPerDay > GAP_ALERT_KCAL;
+  return { from, to, expectedChangeKg, actualChangeKg, gapKcalPerDay, incompleteDays, alert };
 }

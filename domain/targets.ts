@@ -49,8 +49,9 @@ export interface MacroTargets {
 
 export function macroTargets(weightKg: number, c: Constraints): MacroTargets {
   const byWeight = PROTEIN_G_PER_KG * weightKg;
+  const atLeastMin = Math.max(byWeight, c.protein?.min ?? 0);
   return {
-    protein: Math.min(byWeight, c.protein?.max ?? Number.POSITIVE_INFINITY),
+    protein: Math.min(atLeastMin, c.protein?.max ?? Number.POSITIVE_INFINITY),
     carbs: null,
     fat: null,
   };

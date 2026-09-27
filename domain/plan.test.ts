@@ -8,6 +8,11 @@ describe('plannedWeight', () => {
     expect(plannedWeight(testGoal, '2026-09-01')).toBe(90);
     expect(plannedWeight(testGoal, '2026-09-15')).toBeCloseTo(89.1, 10);
   });
+
+  it('stays at the target after the planned end and at the start before the goal began', () => {
+    expect(plannedWeight(testGoal, '2028-01-01')).toBe(80);
+    expect(plannedWeight(testGoal, '2026-08-01')).toBe(90);
+  });
 });
 
 describe('planStatus', () => {

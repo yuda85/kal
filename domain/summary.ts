@@ -1,6 +1,7 @@
 import { bmr } from './bmr.ts';
 import { addDays, dateRange, weekStart } from './dates.ts';
-import { expenditure, type Expenditure } from './expenditure.ts';
+import { ACTIVITY_FACTORS, expenditure, type Expenditure } from './expenditure.ts';
+import { plannedWeight } from './plan.ts';
 import { macroTargets } from './targets.ts';
 import { trendOn, trendSeries } from './trend.ts';
 import type { Day, Entry, Goal, Profile, Range, WeighIn } from './types.ts';
@@ -80,10 +81,13 @@ export function summarizeDay(input: DayInput): DaySummary {
     bmrKcal,
     activityLevel: profile.activityLevel,
   });
-  const targetKcal = exp.out - goal.dailyDeficitKcal;
-  const intake = sumIntake(entries);
-  const targets = macroTargets(trendKg, profile.constraints);
   const c = profile.constraints;
+  const targetKcal = Math.min(
+    Math.max(exp.out - goal.dailyDeficitKcal, c.kcal?.min ?? Number.NEGATIVE_INFINITY),
+    c.kcal?.max ?? Number.POSITIVE_INFINITY,
+  );
+  const intake = sumIntake(entries);
+  const targets = macroTargets(trendKg, c);
   const macros: Record<MacroKey, MacroLine> = {
     kcal: line(intake.kcal, targetKcal, c.kcal),
     protein: line(intake.protein, targets.protein, c.protein),
@@ -95,7 +99,9 @@ export function summarizeDay(input: DayInput): DaySummary {
     const m = macros[key];
     if (m.max !== null && m.value > m.max) warnings.push({ code: 'over_max', macro: key, value: m.value, limit: m.max });
   }
-  if (targetKcal < bmrKcal) warnings.push({ code: 'below_bmr', value: targetKcal, limit: bmrKcal });
+  // Judge the goal, not the partial day: a typical day's target for this activity level.
+  const typicalTarget = bmrKcal * ACTIVITY_FACTORS[profile.activityLevel] - goal.dailyDeficitKcal;
+  if (typicalTarget < bmrKcal) warnings.push({ code: 'below_bmr', value: typicalTarget, limit: bmrKcal });
   return {
     date,
     entries,
@@ -153,9 +159,12 @@ export function summarizeWeek(input: WeekInput): WeekSummary {
       weighIns: input.weighIns,
     }),
   );
-  const logged = days.filter((d) => d.date < input.today && d.entries.length > 0);
+  const threshold = input.profile.settings.lowDayThresholdKcal;
+  const logged = days.filter((d) => d.date < input.today && d.intake.kcal >= threshold);
+  const lastDate = dates.at(-1) ?? start;
   const series = trendSeries(input.weighIns);
-  const trendEnd = trendOn(series, dates.at(-1) ?? start);
+  const weighedThisWeek = input.weighIns.some((w) => w.date >= start && w.date <= lastDate);
+  const trendEnd = weighedThisWeek ? trendOn(series, lastDate) : null;
   const trendStart = trendOn(series, addDays(start, -1));
   return {
     start,
@@ -168,6 +177,6 @@ export function summarizeWeek(input: WeekInput): WeekSummary {
     targetDeficitKcal: input.goal.dailyDeficitKcal,
     avgProtein: average(logged.map((d) => d.intake.protein)),
     trendChangeKg: trendEnd !== null && trendStart !== null ? trendEnd - trendStart : null,
-    plannedChangeKg: -input.goal.paceKgPerWeek,
+    plannedChangeKg: plannedWeight(input.goal, lastDate) - plannedWeight(input.goal, addDays(start, -1)),
   };
 }
