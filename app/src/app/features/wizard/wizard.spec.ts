@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { FakeRepository, NOW } from '../../../testing/fake-repository';
+import { FakeRepository, NOW, seededRepository } from '../../../testing/fake-repository';
 import { KalState } from '../../core/kal-state';
 import { KalRepository } from '../../core/repository';
 import { Wizard } from './wizard';
@@ -21,6 +21,23 @@ async function openSummary(repo: FakeRepository) {
   await fixture.whenStable();
   return { fixture, w };
 }
+
+describe('Wizard editing', () => {
+  it('prefills the latest real weigh-in and keeps saved constraints when skipping', async () => {
+    const repo = seededRepository();
+    repo.weighIns = [{ date: '2026-09-20', kg: 86 }, { date: '2026-09-27', kg: 85 }];
+    TestBed.configureTestingModule({ imports: [Wizard], providers: [provideRouter([]), { provide: KalRepository, useValue: repo }] });
+    const state = TestBed.inject(KalState);
+    state.now.set(NOW);
+    state.start('u1');
+    const fixture = TestBed.createComponent(Wizard);
+    const w = fixture.componentInstance as unknown as { form(): { currentWeightKg: number; constraints: { proteinMax: number | null } }; step: { set(v: number): void }; skip(): void };
+    expect(w.form().currentWeightKg).toBe(85);
+    w.step.set(3);
+    w.skip();
+    expect(w.form().constraints.proteinMax).toBe(120);
+  });
+});
 
 describe('Wizard', () => {
   it('saves the setup through the repository', async () => {

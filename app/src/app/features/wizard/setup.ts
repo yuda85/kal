@@ -131,7 +131,7 @@ export function previewSetup(f: SetupForm, today: string) {
 
 export function buildSetup(
   f: SetupForm,
-  ctx: { today: string; time: string; goalId: string; previousGoal: Goal | null; previousProfile: Profile | null },
+  ctx: { today: string; time: string; goalId: string; previousGoal: Goal | null; previousProfile: Profile | null; latestKg: number | null },
 ): SetupWrite {
   const weight = f.currentWeightKg!;
   const prev = ctx.previousGoal;
@@ -158,7 +158,7 @@ export function buildSetup(
     ...(f.bodyFatPct !== null ? { bodyFatPct: f.bodyFatPct } : {}),
     activityLevel: f.activityLevel,
     constraints,
-    settings: { lowDayThresholdKcal: ctx.previousProfile?.settings.lowDayThresholdKcal ?? 800 },
+    settings: { lowDayThresholdKcal: ctx.previousProfile?.settings?.lowDayThresholdKcal ?? 800 },
     activeGoalId: goal.id,
     ...(ctx.previousProfile?.garminLastSyncAt ? { garminLastSyncAt: ctx.previousProfile.garminLastSyncAt } : {}),
   };
@@ -167,6 +167,7 @@ export function buildSetup(
     computed: { bmrKcal: bmr(profile, weight, ctx.today), macroTargets: macroTargets(weight, constraints), updatedAt: ctx.today },
     goal,
     previousGoalId: sameGoal ? null : (prev?.id ?? null),
-    weighIn: { date: ctx.today, kg: weight, time: ctx.time },
+    // Editing without touching the weight must not invent or overwrite a weigh-in.
+    weighIn: ctx.previousProfile !== null && weight === ctx.latestKg ? null : { date: ctx.today, kg: weight, time: ctx.time },
   };
 }

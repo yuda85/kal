@@ -13,7 +13,7 @@ const form: SetupForm = {
   customPaceKgPerWeek: null,
   constraints: { kcalMin: null, kcalMax: null, proteinMin: null, proteinMax: 120, carbsMax: null, fatMax: null },
 };
-const ctx = { today: '2026-09-27', time: '10:00', goalId: 'g2', previousGoal: null, previousProfile: null };
+const ctx = { today: '2026-09-27', time: '10:00', goalId: 'g2', previousGoal: null, previousProfile: null, latestKg: null };
 
 describe('buildSetup', () => {
   it('creates profile, goal, computed values and the first weigh-in', () => {
@@ -37,6 +37,21 @@ describe('buildSetup', () => {
     const s = buildSetup({ ...form, targetWeightKg: 78 }, { ...ctx, previousGoal: testGoal, previousProfile: testProfile });
     expect(s.goal.id).toBe('g2');
     expect(s.previousGoalId).toBe('g1');
+  });
+
+  it('writes no weigh-in when editing without changing the weight', () => {
+    const s = buildSetup(form, { ...ctx, previousGoal: testGoal, previousProfile: testProfile, latestKg: 90 });
+    expect(s.weighIn).toBeNull();
+  });
+
+  it('records a changed weight when editing', () => {
+    const s = buildSetup(form, { ...ctx, previousGoal: testGoal, previousProfile: testProfile, latestKg: 91 });
+    expect(s.weighIn).toEqual({ date: '2026-09-27', kg: 90, time: '10:00' });
+  });
+
+  it('survives a profile document without settings', () => {
+    const bare = { ...testProfile, settings: undefined } as unknown as typeof testProfile;
+    expect(buildSetup(form, { ...ctx, previousProfile: bare }).profile.settings.lowDayThresholdKcal).toBe(800);
   });
 
   it('keeps the Garmin sync stamp of an existing profile', () => {

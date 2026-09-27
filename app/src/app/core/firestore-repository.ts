@@ -78,8 +78,10 @@ export class FirestoreKalRepository extends KalRepository {
     }
     const { id: goalId, ...goal } = setup.goal;
     batch.set(doc(this.col(uid, 'goals'), goalId), goal);
-    const { date, ...weighIn } = setup.weighIn;
-    batch.set(doc(this.col(uid, 'weights'), date), weighIn);
+    if (setup.weighIn) {
+      const { date, ...weighIn } = setup.weighIn;
+      batch.set(doc(this.col(uid, 'weights'), date), weighIn);
+    }
     return batch.commit();
   }
 }

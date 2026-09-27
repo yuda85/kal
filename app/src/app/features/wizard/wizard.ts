@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { KalState } from '../../core/kal-state';
 import { KalRepository } from '../../core/repository';
-import { localTime, newLinkId, trendOn, trendSeries } from '../../domain';
+import { localTime, newLinkId } from '../../domain';
 import { fmt, num, shortDate } from '../../shared/format';
 import { buildSetup, initialForm, previewSetup, validateStep, type ConstraintFields, type SetupForm } from './setup';
 
@@ -116,10 +116,9 @@ export class Wizard {
   protected readonly num = num;
   protected readonly shortDate = shortDate;
 
+  private readonly latestKg = [...this.state.weighIns()].sort((a, b) => a.date.localeCompare(b.date)).at(-1)?.kg ?? null;
   readonly step = signal(0);
-  readonly form = signal<SetupForm>(
-    initialForm(this.state.profile(), this.state.goal(), trendOn(trendSeries(this.state.weighIns()), this.state.today())),
-  );
+  readonly form = signal<SetupForm>(initialForm(this.state.profile(), this.state.goal(), this.latestKg));
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
   protected readonly permissionUid = signal<string | null>(null);
@@ -148,7 +147,8 @@ export class Wizard {
   }
 
   protected skip(): void {
-    this.form.update((f) => ({ ...f, constraints: initialForm(null, null, null).constraints }));
+    this.stepError.set(null);
+    this.form.update((f) => ({ ...f, constraints: initialForm(this.state.profile(), null, null).constraints }));
     this.step.update((s) => s + 1);
   }
 
@@ -165,6 +165,7 @@ export class Wizard {
         goalId: newLinkId(),
         previousGoal: this.state.goal(),
         previousProfile: this.state.profile(),
+        latestKg: this.latestKg,
       });
     } catch (e) {
       this.saveError.set(e instanceof Error ? e.message : String(e));

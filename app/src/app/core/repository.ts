@@ -13,7 +13,7 @@ export interface SetupWrite {
   computed: ProfileComputed;
   goal: Goal;
   previousGoalId: string | null;
-  weighIn: WeighIn;
+  weighIn: WeighIn | null;
 }
 
 export abstract class KalRepository {
