@@ -20,4 +20,8 @@ Personal calorie and macro tracker. Food is logged by talking to Claude, who pro
 
 - `npm test` — domain + skill tests
 - `npm run typecheck`
-- `npm run test:rules` — Firestore rules against the emulator (needs Java 21)
+- `npm run test:rules` — Firestore rules against the emulator (needs Java 21; runs in CI)
+- `cd app && npx ng test --watch=false` — app tests
+- `cd app && npx ng serve` — app on http://localhost:4310/
+- The app imports `domain/` only via `app/src/app/domain.ts`. `app/` has its own `package.json` (TypeScript 5.9 for Angular; the root uses TS 7).
+- Owner setup: `docs/setup.md`.

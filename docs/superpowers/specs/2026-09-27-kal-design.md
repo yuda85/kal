@@ -4,6 +4,7 @@
 - **Status:** Draft — awaiting owner review
 - **Repo:** `github.com/yuda85/kal` (public) · local `~/dev/dedv/kal`
 - **App URL:** `https://yuda85.github.io/kal/`
+- **Firebase project:** `trainerio-cf81a` (created for kal)
 
 ## 1. Goal and principles
 
@@ -58,10 +59,10 @@ Push to main ─ GitHub Action ─ build + test ─→ GitHub Pages
 
 | Component | Tech | Responsibility |
 |---|---|---|
-| App | Angular 21 (standalone, signals, zoneless), `@angular/pwa`, Firebase JS SDK, Chart.js, Lucide icons | Wizard, dashboard, confirm screen, quick-add, recipes, settings |
+| App | Angular 21 (standalone, signals, zoneless), `@angular/pwa`, Firebase JS SDK, Chart.js, `@lucide/angular` icons | Wizard, dashboard, confirm screen, quick-add, recipes, settings |
 | Domain | Framework-free TypeScript, zero dependencies | All calculations; shared by app and skill scripts |
 | Store | Firestore (Spark / free tier) | All user data |
-| Auth | Firebase Auth, Google sign-in (popup) | App writes only |
+| Auth | Firebase Auth, Google sign-in (popup, `prompt=select_account`; a hint after 20 s if the popup hangs, the iOS home-screen risk) | App writes only |
 | Garmin sync | Python 3.12, `garminconnect`, `firebase-admin`, GitHub Actions | Pull steps and workouts every 3 h |
 | Skill | `.claude/skills/kal/` — `SKILL.md`, `read.ts`, `link.ts` | Conversation → link; answer questions from data |
 | Hosting | GitHub Pages via Actions | Static app |
@@ -116,7 +117,7 @@ users/{uid}                              profile
   constraints: { kcal?, protein?, carbs?, fat? }  each { min?, max? }
   settings: { lowDayThresholdKcal: 800 }
   computed: { bmrKcal, macroTargets: { protein, carbs?, fat? }, updatedAt }
-  activeGoalId, garminLastSyncAt?, updatedAt
+  activeGoalId, garminLastSyncAt?
 
 users/{uid}/goals/{goalId}
   startDate, startWeightKg, targetWeightKg
@@ -127,7 +128,7 @@ users/{uid}/entries/{id}                 one food item
   date, time ('HH:mm'), name
   kcal, protein?, carbs?, fat?           null = unknown
   recipeId?, qty?                        reference only; numbers are a snapshot
-  source: 'link' | 'form', createdAt
+  source: 'link' | 'form'
 
 users/{uid}/days/{date}                  expenditure inputs
   garmin?: { steps, workouts: [{ type, durationMin, kcal, steps? }],
@@ -158,14 +159,27 @@ Decisions:
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
+    function isOwner(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && exists(/databases/$(db)/documents/owners/$(uid));
+    }
+
     match /users/{uid}/{doc=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow write: if isOwner(uid);
+    }
+
+    match /owners/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
     }
   }
 }
 ```
 
+- Only uids registered in `owners/{uid}` (created by hand in the Firebase console) can write, so a stranger signing in with Google cannot store data in the project.
+- The app keeps entries from the last 90 days in memory (older weeks are not browsable in the app; Claude's `read.ts` reads any range).
 - Public read is intentional (owner accepted it; lets Claude read without credentials). Side effect: anyone can list user ids.
 - The Garmin Action uses the Admin SDK (bypasses rules) with a service account limited to `Cloud Datastore User`.
 
@@ -184,7 +198,7 @@ https://yuda85.github.io/kal/#p=<base64url(UTF-8 JSON)>
 | `add` | `id`, `date`, `time`, `name`, `kcal`, `protein?`, `carbs?`, `fat?`, `recipeId?`, `qty?` |
 | `recipe` | `id` (slug), `name`, `aliases`, `ingredients`, `yield` |
 | `weight` | `date`, `kg` |
-| `activity` | `date`, `steps?`, `workouts?` |
+| `activity` | `id`, `date`, `steps?`, `workouts?` |
 
 Validation ranges (reject the whole link if any value is outside):
 
@@ -211,7 +225,8 @@ Validation ranges (reject the whole link if any value is outside):
 - Shows the day after saving: kcal vs target, macro bullets.
 - Warns on constraint breaches (e.g. "protein 131 g, above the 120 g cap").
 - Quantity and kcal are editable inline before saving. Changing `qty` on an entry with `recipeId` recomputes from the recipe's `perUnit` (from Firestore, or from a `recipe` op in the same link); without a recipe it scales the entry's numbers proportionally.
-- Save → toast "נשמר" → `history.replaceState` clears the fragment → navigate to Today.
+- The app removes the `#p=` fragment with `history.replaceState` as soon as it starts (also when a link opens into an already-open tab); the payload stays in memory until Save or Cancel.
+- Save → toast "נשמר" → navigate to Today. Manual workouts carry the activity `id` as `linkId`, so re-opening a link never duplicates them.
 - Not signed in → sign in first, fragment preserved, return to confirm.
 
 **Security:** anyone can craft a link, but nothing is written without the owner's tap on Save, and the screen shows exactly what will be written. All payload text renders as text, never HTML.
@@ -334,7 +349,7 @@ Details and tokens: `design-system/kal/MASTER.md`.
 - Invalid link → dedicated error screen, nothing saved.
 - Garmin stale > 6 h → banner with manual-entry shortcut.
 - Auth: Google popup. If popups misbehave in the iOS home-screen PWA, add email/password sign-in.
-- Save failures → inline error with retry; never silent.
+- Writes from the confirm screen and quick-add are not awaited (offline-safe); a failed write shows a "השמירה נכשלה" toast. The first-run wizard awaits its save and, on `permission-denied`, shows the uid and the `owners/{uid}` fix.
 
 ## 11. Testing
 
@@ -349,12 +364,12 @@ Details and tokens: `design-system/kal/MASTER.md`.
 
 ## 12. Owner setup (manual, once)
 
-Claude does not create cloud resources or sign in on the owner's behalf. The implementation plan will include exact steps for:
+Claude does not create cloud resources or sign in on the owner's behalf. Step-by-step guide: `docs/setup.md`.
 
-1. `gh auth login` as `yuda85` (currently `gh` is logged in as `JudahAero`).
-2. Create a Firebase project (Spark plan) and a web app; paste its config into the app.
+1. Pushing uses the `JudahAero` gh account (owner approved).
+2. Firebase project `trainerio-cf81a` with a web app; its config is in `app/src/app/core/firebase-config.ts`.
 3. Enable Authentication → Google; add `yuda85.github.io` to authorized domains.
-4. Create Firestore (nearest region); deploy `firestore.rules`.
+4. Create Firestore (nearest region); paste `firestore.rules` into the console; after the first sign-in create `owners/{uid}`.
 5. Create a service account with role `Cloud Datastore User` → JSON key → GitHub secret `FIREBASE_SA`.
 6. Run `bootstrap_tokens.py` locally → GitHub secret `GARMIN_TOKENS`.
 7. Sign in to the app once → copy `uid` from Settings → GitHub secret `KAL_UID` and skill `config.json`.

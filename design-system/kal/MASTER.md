@@ -74,7 +74,7 @@ Every chart has a text summary next to it (hero number, status chip, or KPI card
 
 ## Icons
 
-Lucide (`lucide-angular`), outline, 18–22px. No emoji as icons. Icon-only buttons get `aria-label`.
+Lucide via `@lucide/angular` (standalone `<svg lucideX>` components), outline, 18–22px. No emoji as icons. Icon-only buttons get `aria-label`.
 
 ## Motion
 

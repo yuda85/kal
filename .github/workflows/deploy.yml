@@ -1,0 +1,60 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+
+      - name: Domain + skill tests
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+
+      - name: App tests + build
+        working-directory: app
+        run: |
+          npm ci
+          npx ng test --watch=false
+          npx ng build --base-href /kal/
+
+      - name: SPA fallback (deep links)
+        run: cp app/dist/kal/browser/index.html app/dist/kal/browser/404.html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: app/dist/kal/browser
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
