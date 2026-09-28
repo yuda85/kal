@@ -1,9 +1,9 @@
 import { bmr } from './bmr.ts';
-import { addDays, dateRange, weekStart } from './dates.ts';
+import { addDays, dateRange, daysBetween, weekStart } from './dates.ts';
 import { expenditure, kcalPerStep, type Expenditure } from './expenditure.ts';
 import { plannedWeight } from './plan.ts';
 import { settingsOf } from './settings.ts';
-import { macroTargets } from './targets.ts';
+import { KCAL_PER_KG, macroTargets } from './targets.ts';
 import { trendOn, trendSeries } from './trend.ts';
 import type { Day, Entry, Goal, Profile, Range, WeighIn } from './types.ts';
 
@@ -126,8 +126,7 @@ export function summarizeDay(input: DayInput): DaySummary {
   };
 }
 
-export interface WeekInput {
-  date: string;
+export interface RangeInput {
   today: string;
   entries: Entry[];
   days: Day[];
@@ -136,32 +135,32 @@ export interface WeekInput {
   weighIns: WeighIn[];
 }
 
-export interface WeekSummary {
+export interface RangeSummary {
   start: string;
   end: string;
   days: DaySummary[];
   daysLogged: number;
+  imputedDays: number;
   avgInKcal: number | null;
   avgOutKcal: number | null;
   avgDeficitKcal: number | null;
-  targetDeficitKcal: number;
   avgProtein: number | null;
+  workoutsCount: number;
   trendChangeKg: number | null;
-  plannedChangeKg: number;
+  weightDeficitKcal: number | null;
 }
 
 function average(values: number[]): number | null {
   return values.length === 0 ? null : values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-export function summarizeWeek(input: WeekInput): WeekSummary {
-  const start = weekStart(input.date);
-  const end = addDays(start, 6);
+function summarizeRange(start: string, end: string, input: RangeInput): RangeSummary {
   const dayByDate = new Map(input.days.map((d) => [d.date, d]));
   const dates = dateRange(start, end).filter((d) => d <= input.today);
   const days = dates.map((date) =>
     summarizeDay({
       date,
+      today: input.today,
       entries: input.entries,
       day: dayByDate.get(date),
       profile: input.profile,
@@ -169,24 +168,67 @@ export function summarizeWeek(input: WeekInput): WeekSummary {
       weighIns: input.weighIns,
     }),
   );
-  const threshold = input.profile.settings.lowDayThresholdKcal;
-  const logged = days.filter((d) => d.date < input.today && d.intake.kcal >= threshold);
+  const finished = days.filter((d) => d.date < input.today && d.date >= input.goal.startDate);
+  const logged = finished.filter((d) => !d.imputed);
   const lastDate = dates.at(-1) ?? start;
   const series = trendSeries(input.weighIns);
-  const weighedThisWeek = input.weighIns.some((w) => w.date >= start && w.date <= lastDate);
-  const trendEnd = weighedThisWeek ? trendOn(series, lastDate) : null;
+  const weighedInRange = input.weighIns.some((w) => w.date >= start && w.date <= lastDate);
+  const trendEnd = weighedInRange ? trendOn(series, lastDate) : null;
   const trendStart = trendOn(series, addDays(start, -1));
+  const trendChangeKg = trendEnd !== null && trendStart !== null ? trendEnd - trendStart : null;
+  const span = daysBetween(addDays(start, -1), lastDate);
   return {
     start,
     end,
     days,
     daysLogged: logged.length,
-    avgInKcal: average(logged.map((d) => d.intake.kcal)),
-    avgOutKcal: average(logged.map((d) => d.expenditure.out)),
-    avgDeficitKcal: average(logged.map((d) => d.expenditure.out - d.intake.kcal)),
-    targetDeficitKcal: input.goal.dailyDeficitKcal,
+    imputedDays: finished.length - logged.length,
+    avgInKcal: average(finished.map((d) => d.countedKcal)),
+    avgOutKcal: average(finished.map((d) => d.expenditure.out)),
+    avgDeficitKcal: average(finished.map((d) => d.expenditure.out - d.countedKcal)),
     avgProtein: average(logged.map((d) => d.intake.protein)),
-    trendChangeKg: trendEnd !== null && trendStart !== null ? trendEnd - trendStart : null,
+    workoutsCount: days.reduce((n, d) => n + d.expenditure.workouts.length, 0),
+    trendChangeKg,
+    weightDeficitKcal: trendChangeKg === null || span <= 0 ? null : (-trendChangeKg * KCAL_PER_KG) / span,
+  };
+}
+
+export interface WeekInput extends RangeInput {
+  date: string;
+}
+
+export interface WeekSummary extends RangeSummary {
+  targetDeficitKcal: number;
+  plannedChangeKg: number;
+}
+
+export function summarizeWeek(input: WeekInput): WeekSummary {
+  const start = weekStart(input.date);
+  const range = summarizeRange(start, addDays(start, 6), input);
+  const lastDate = range.days.at(-1)?.date ?? start;
+  return {
+    ...range,
+    targetDeficitKcal: input.goal.dailyDeficitKcal,
     plannedChangeKg: plannedWeight(input.goal, lastDate) - plannedWeight(input.goal, addDays(start, -1)),
   };
+}
+
+export interface MonthInput extends RangeInput {
+  month: string;
+}
+
+export interface MonthSummary extends RangeSummary {
+  month: string;
+  workoutsPerWeek: number | null;
+}
+
+export function monthEnd(month: string): string {
+  const [y, m] = month.split('-').map(Number);
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+}
+
+export function summarizeMonth(input: MonthInput): MonthSummary {
+  const range = summarizeRange(`${input.month}-01`, monthEnd(input.month), input);
+  const elapsed = range.days.length;
+  return { ...range, month: input.month, workoutsPerWeek: elapsed === 0 ? null : (range.workoutsCount * 7) / elapsed };
 }

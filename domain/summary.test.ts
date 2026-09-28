@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { summarizeDay, summarizeWeek } from './summary.ts';
+import { monthEnd, summarizeDay, summarizeMonth, summarizeWeek } from './summary.ts';
 import { makeEntry, testGoal, testProfile } from './testing.ts';
 import type { Day } from './types.ts';
 
@@ -121,9 +121,10 @@ describe('summarizeWeek', () => {
     expect(w.days.map((d) => d.date)).toEqual(['2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30']);
   });
 
-  it('averages only completed logged days', () => {
+  it('averages every finished day, counting days without food as 3,200', () => {
     expect(w.daysLogged).toBe(2);
-    expect(w.avgInKcal).toBe(1900);
+    expect(w.imputedDays).toBe(1);
+    expect(w.avgInKcal).toBeCloseTo((1800 + 2000 + 3200) / 3, 6);
     expect(w.avgProtein).toBe(105);
     expect(w.avgDeficitKcal).toBeCloseTo(w.avgOutKcal! - w.avgInKcal!, 6);
   });
@@ -140,7 +141,7 @@ describe('summarizeWeek', () => {
     expect(past.plannedChangeKg).toBeCloseTo(-0.45, 10);
   });
 
-  it('does not count under-logged days in the averages', () => {
+  it('counts an under-logged finished day as the penalty', () => {
     const partial = summarizeWeek({
       date: '2026-09-30',
       today: '2026-09-30',
@@ -151,7 +152,7 @@ describe('summarizeWeek', () => {
       weighIns: weekWeighIns,
     });
     expect(partial.daysLogged).toBe(2);
-    expect(partial.avgInKcal).toBe(1900);
+    expect(partial.avgInKcal).toBeCloseTo((1800 + 2000 + 3200) / 3, 6);
   });
 
   it('reports no trend change for a week without weigh-ins', () => {
@@ -171,5 +172,44 @@ describe('summarizeWeek', () => {
     const empty = summarizeWeek({ date: '2026-09-27', today: '2026-09-27', entries: [], days: [], profile: testProfile, goal: testGoal, weighIns: [] });
     expect(empty.avgInKcal).toBeNull();
     expect(empty.trendChangeKg).toBeNull();
+  });
+
+  it('counts workouts and the weight-implied deficit', () => {
+    const days = [
+      { date: '2026-09-27', manual: { workouts: [{ type: 'Push', kcal: 350 }] } },
+      { date: '2026-09-29', manual: { workouts: [{ type: 'Legs', kcal: 400 }] } },
+    ];
+    const ww = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days, profile: testProfile, goal: testGoal, weighIns: weekWeighIns });
+    expect(ww.workoutsCount).toBe(2);
+    // trend −0.088 kg over the 4 days from 09-26 to 09-30
+    expect(ww.weightDeficitKcal).toBeCloseTo((0.088 * 7700) / 4, 1);
+  });
+});
+
+describe('summarizeMonth', () => {
+  const entries = [makeEntry({ date: '2026-09-02', kcal: 2000 }), makeEntry({ date: '2026-09-03', kcal: 2100 })];
+  const days = [
+    { date: '2026-09-02', manual: { workouts: [{ type: 'Push', kcal: 300 }] } },
+    { date: '2026-09-09', manual: { workouts: [{ type: 'Pull', kcal: 300 }] } },
+  ];
+  const m = summarizeMonth({ month: '2026-09', today: '2026-09-15', entries, days, profile: testProfile, goal: testGoal, weighIns: [] });
+
+  it('covers the month up to today', () => {
+    expect(m.start).toBe('2026-09-01');
+    expect(m.end).toBe('2026-09-30');
+    expect(m.days).toHaveLength(15);
+  });
+
+  it('counts workouts, per-week rate and penalized days', () => {
+    expect(m.workoutsCount).toBe(2);
+    expect(m.workoutsPerWeek).toBeCloseTo((2 * 7) / 15, 6);
+    // goal starts 09-01: 1..14 finished, 2 logged, 12 penalized
+    expect(m.daysLogged).toBe(2);
+    expect(m.imputedDays).toBe(12);
+  });
+
+  it('knows month lengths', () => {
+    expect(monthEnd('2026-02')).toBe('2026-02-28');
+    expect(monthEnd('2028-02')).toBe('2028-02-29');
   });
 });
