@@ -1,7 +1,8 @@
 import { bmr } from './bmr.ts';
 import { addDays, dateRange, weekStart } from './dates.ts';
-import { ACTIVITY_FACTORS, expenditure, type Expenditure } from './expenditure.ts';
+import { expenditure, kcalPerStep, type Expenditure } from './expenditure.ts';
 import { plannedWeight } from './plan.ts';
+import { settingsOf } from './settings.ts';
 import { macroTargets } from './targets.ts';
 import { trendOn, trendSeries } from './trend.ts';
 import type { Day, Entry, Goal, Profile, Range, WeighIn } from './types.ts';
@@ -41,6 +42,8 @@ export interface DaySummary {
   remainingKcal: number;
   macros: Record<MacroKey, MacroLine>;
   warnings: Warning[];
+  imputed: boolean;
+  countedKcal: number;
 }
 
 export interface DayInput {
@@ -50,6 +53,7 @@ export interface DayInput {
   profile: Profile;
   goal: Goal;
   weighIns: WeighIn[];
+  today?: string;
 }
 
 const MACRO_KEYS: MacroKey[] = ['kcal', 'protein', 'carbs', 'fat'];
@@ -72,6 +76,7 @@ function line(value: number, target: number | null, range: Range | undefined): M
 
 export function summarizeDay(input: DayInput): DaySummary {
   const { date, profile, goal } = input;
+  const settings = settingsOf(profile);
   const entries = input.entries.filter((e) => e.date === date).sort((a, b) => a.time.localeCompare(b.time));
   const trendKg = trendOn(trendSeries(input.weighIns), date) ?? goal.startWeightKg;
   const bmrKcal = bmr(profile, trendKg, date);
@@ -79,7 +84,7 @@ export function summarizeDay(input: DayInput): DaySummary {
     weightKg: trendKg,
     heightCm: profile.heightCm,
     bmrKcal,
-    activityLevel: profile.activityLevel,
+    defaultSteps: settings.defaultSteps,
   });
   const c = profile.constraints;
   const targetKcal = Math.min(
@@ -99,9 +104,12 @@ export function summarizeDay(input: DayInput): DaySummary {
     const m = macros[key];
     if (m.max !== null && m.value > m.max) warnings.push({ code: 'over_max', macro: key, value: m.value, limit: m.max });
   }
-  // Judge the goal, not the partial day: a typical day's target for this activity level.
-  const typicalTarget = bmrKcal * ACTIVITY_FACTORS[profile.activityLevel] - goal.dailyDeficitKcal;
-  if (typicalTarget < bmrKcal) warnings.push({ code: 'below_bmr', value: typicalTarget, limit: bmrKcal });
+  // Judge the goal on a typical day (default steps, no workout), not on the partial day.
+  const typicalTarget = bmrKcal + kcalPerStep(trendKg, profile.heightCm) * settings.defaultSteps - goal.dailyDeficitKcal;
+  if (typicalTarget < 0.75 * bmrKcal) warnings.push({ code: 'below_bmr', value: typicalTarget, limit: bmrKcal });
+  // A finished day without enough food counts as the missing-day penalty.
+  const imputed =
+    input.today !== undefined && date < input.today && date >= goal.startDate && intake.kcal < settings.lowDayThresholdKcal;
   return {
     date,
     entries,
@@ -111,6 +119,8 @@ export function summarizeDay(input: DayInput): DaySummary {
     deficitKcal: goal.dailyDeficitKcal,
     targetKcal,
     remainingKcal: targetKcal - intake.kcal,
+    imputed,
+    countedKcal: imputed ? settings.missingDayKcal : intake.kcal,
     macros,
     warnings,
   };

@@ -17,6 +17,25 @@ const entries = [
 ];
 
 describe('summarizeDay', () => {
+  it('counts a finished day with too little food as the missing-day penalty', () => {
+    const coffee = [makeEntry({ date: '2026-09-26', kcal: 2 })];
+    const past = summarizeDay({ date: '2026-09-26', today: '2026-09-27', entries: coffee, profile: testProfile, goal: testGoal, weighIns });
+    expect(past.imputed).toBe(true);
+    expect(past.countedKcal).toBe(3200);
+    expect(past.intake.kcal).toBe(2);
+  });
+
+  it('never penalizes today or days before the goal', () => {
+    expect(summarizeDay({ date, today: date, entries: [], profile: testProfile, goal: testGoal, weighIns }).imputed).toBe(false);
+    expect(summarizeDay({ date: '2026-08-20', today: date, entries: [], profile: testProfile, goal: testGoal, weighIns }).imputed).toBe(false);
+  });
+
+  it('keeps real intake once enough food is logged', () => {
+    const s = summarizeDay({ date: '2026-09-26', today: date, entries: [makeEntry({ date: '2026-09-26', kcal: 1900 })], profile: testProfile, goal: testGoal, weighIns });
+    expect(s.imputed).toBe(false);
+    expect(s.countedKcal).toBe(1900);
+  });
+
   const s = summarizeDay({ date, entries, day, profile: testProfile, goal: testGoal, weighIns });
 
   it('keeps only the day entries, sorted by time', () => {
@@ -45,10 +64,12 @@ describe('summarizeDay', () => {
     expect(w.warnings).toContainEqual({ code: 'over_max', macro: 'protein', value: 136, limit: 120 });
   });
 
-  it('warns when the target falls below BMR', () => {
+  it('warns when a typical day target falls far below BMR', () => {
     const goal = { ...testGoal, dailyDeficitKcal: 1500 };
     const w = summarizeDay({ date, entries: [], profile: testProfile, goal, weighIns });
-    expect(w.warnings).toContainEqual({ code: 'below_bmr', value: 1792.5 * 1.55 - 1500, limit: 1792.5 });
+    const warning = w.warnings.find((x) => x.code === 'below_bmr')!;
+    expect(warning.limit).toBe(1792.5);
+    expect(warning.value).toBeCloseTo(1792.5 + 3500 * 0.03139475 - 1500, 2);
   });
 
   it('does not warn below BMR on an active day when the goal itself is moderate', () => {

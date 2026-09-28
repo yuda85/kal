@@ -19,9 +19,9 @@ export interface Profile {
   birthDate: string;
   heightCm: number;
   bodyFatPct?: number;
-  activityLevel: ActivityLevel;
+  activityLevel?: ActivityLevel;
   constraints: Constraints;
-  settings: { lowDayThresholdKcal: number };
+  settings: { lowDayThresholdKcal: number; defaultSteps?: number; missingDayKcal?: number };
   activeGoalId?: string;
   garminLastSyncAt?: string;
 }
@@ -53,7 +53,7 @@ export interface Entry {
 
 export interface Workout {
   type: string;
-  durationMin: number;
+  durationMin?: number;
   kcal: number;
   steps?: number;
   linkId?: string;
@@ -73,6 +73,7 @@ export interface Day {
     steps?: number;
     workouts?: Workout[];
   };
+  checkedInAt?: string;
 }
 
 export interface WeighIn {

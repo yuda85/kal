@@ -181,7 +181,7 @@ function checkWorkout(w: unknown, path: string, errors: string[]): void {
   }
   checkKeys(w, KEYS.workout, path, errors);
   checkName(w, 'type', path, errors, 40);
-  checkNumber(w, 'durationMin', LIMITS.durationMin, path, errors);
+  checkNumber(w, 'durationMin', LIMITS.durationMin, path, errors, true);
   checkNumber(w, 'kcal', LIMITS.workoutKcal, path, errors);
   checkNumber(w, 'steps', LIMITS.steps, path, errors, true);
 }

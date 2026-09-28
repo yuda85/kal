@@ -43,6 +43,19 @@ describe('planWrites', () => {
   it('marks form entries as form', () => {
     expect(planWrites(payload, { source: 'form', time: '14:00' }).entries[0].source).toBe('form');
   });
+
+  it('marks the day checked in for a check-in activity', () => {
+    const w2 = planWrites({ v: 1, ops: [{ op: 'activity', id: 'checkin', date: '2026-09-27', steps: 9000 }] }, { source: 'link', time: '22:10' });
+    expect(w2.checkIns).toEqual(['2026-09-27']);
+    expect(w.checkIns).toEqual([]);
+  });
+
+  it("keeps the day's workouts when an activity op has only steps", () => {
+    const steps = planWrites({ v: 1, ops: [{ op: 'activity', id: 'checkin', date: '2026-09-27', steps: 9000 }] }, { source: 'link', time: '22:10' });
+    expect(steps.activities[0]).toEqual({ date: '2026-09-27', linkId: 'checkin', steps: 9000 });
+    const existing = { steps: 5000, workouts: [{ type: 'Push', kcal: 350, linkId: 'checkin' }] };
+    expect(mergeManual(existing, steps.activities[0])).toEqual({ steps: 9000, workouts: existing.workouts });
+  });
 });
 
 describe('mergeManual', () => {

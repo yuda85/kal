@@ -13,14 +13,17 @@ export interface ActivityWrite {
   date: string;
   linkId: string;
   steps?: number;
-  workouts: Workout[];
+  workouts?: Workout[];
 }
+
+export const CHECKIN_LINK_ID = 'checkin';
 
 export interface PlannedWrites {
   entries: Entry[];
   recipes: StoredRecipe[];
   weights: WeighIn[];
   activities: ActivityWrite[];
+  checkIns: string[];
 }
 
 export function toEntry(op: AddOp, source: 'link' | 'form'): Entry {
@@ -46,7 +49,7 @@ function toStoredRecipe(op: RecipeOp): StoredRecipe {
 }
 
 export function planWrites(payload: Payload, opts: { source: 'link' | 'form'; time: string }): PlannedWrites {
-  const out: PlannedWrites = { entries: [], recipes: [], weights: [], activities: [] };
+  const out: PlannedWrites = { entries: [], recipes: [], weights: [], activities: [], checkIns: [] };
   for (const op of payload.ops) {
     switch (op.op) {
       case 'add':
@@ -63,8 +66,9 @@ export function planWrites(payload: Payload, opts: { source: 'link' | 'form'; ti
           date: op.date,
           linkId: op.id,
           ...(op.steps !== undefined ? { steps: op.steps } : {}),
-          workouts: (op.workouts ?? []).map((w) => ({ ...w, linkId: op.id })),
+          ...(op.workouts !== undefined ? { workouts: op.workouts.map((w) => ({ ...w, linkId: op.id })) } : {}),
         });
+        if (op.id === CHECKIN_LINK_ID) out.checkIns.push(op.date);
         break;
     }
   }
@@ -72,9 +76,13 @@ export function planWrites(payload: Payload, opts: { source: 'link' | 'form'; ti
 }
 
 export function mergeManual(existing: Day['manual'], a: ActivityWrite): { steps?: number; workouts: Workout[] } {
-  const kept = (existing?.workouts ?? []).filter((w) => w.linkId !== a.linkId);
   const steps = a.steps ?? existing?.steps;
-  return { ...(steps !== undefined ? { steps } : {}), workouts: [...kept, ...a.workouts] };
+  // An op without workouts keeps the day's workouts; `workouts: []` removes this link's.
+  const workouts =
+    a.workouts === undefined
+      ? (existing?.workouts ?? [])
+      : [...(existing?.workouts ?? []).filter((w) => w.linkId !== a.linkId), ...a.workouts];
+  return { ...(steps !== undefined ? { steps } : {}), workouts };
 }
 
 export function rescaleAdd(op: AddOp, recipe: Recipe | undefined, qty: number): AddOp {

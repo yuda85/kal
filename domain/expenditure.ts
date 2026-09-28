@@ -1,27 +1,28 @@
-import type { ActivityLevel, Day, Workout } from './types.ts';
+import type { Day } from './types.ts';
 
-export const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
-  sedentary: 1.2,
-  light: 1.375,
-  moderate: 1.55,
-  high: 1.725,
-};
+export const WORKOUT_TYPES = ['Upper', 'Lower', 'Push', 'Pull', 'Legs', 'Full body', 'Cardio', 'אחר'] as const;
 
 export interface ExpenditureOptions {
   weightKg: number;
   heightCm: number;
   bmrKcal: number;
-  activityLevel: ActivityLevel;
+  defaultSteps: number;
+}
+
+export interface WorkoutBurn {
+  type: string;
+  kcal: number;
+  source: 'manual' | 'garmin';
 }
 
 export interface Expenditure {
   bmr: number;
   steps: number;
+  stepsSource: 'manual' | 'garmin' | 'default';
   stepsKcal: number;
-  workouts: Workout[];
+  workouts: WorkoutBurn[];
   workoutsKcal: number;
   out: number;
-  source: 'measured' | 'fallback';
 }
 
 export function kcalPerStep(weightKg: number, heightCm: number): number {
@@ -29,36 +30,22 @@ export function kcalPerStep(weightKg: number, heightCm: number): number {
   return 0.5 * weightKg * strideKm;
 }
 
-function hasData(day: Day | undefined): day is Day {
-  if (!day) return false;
-  return day.garmin !== undefined || day.manual?.steps !== undefined || (day.manual?.workouts?.length ?? 0) > 0;
-}
-
 export function expenditure(day: Day | undefined, opts: ExpenditureOptions): Expenditure {
-  if (!hasData(day)) {
-    return {
-      bmr: opts.bmrKcal,
-      steps: 0,
-      stepsKcal: 0,
-      workouts: [],
-      workoutsKcal: 0,
-      out: opts.bmrKcal * ACTIVITY_FACTORS[opts.activityLevel],
-      source: 'fallback',
-    };
-  }
-  const steps = day.manual?.steps ?? day.garmin?.steps ?? 0;
-  const workouts = [...(day.garmin?.workouts ?? []), ...(day.manual?.workouts ?? [])];
-  const workoutSteps = workouts.reduce((sum, w) => sum + (w.steps ?? 0), 0);
+  const manualSteps = day?.manual?.steps;
+  const garminSteps = day?.garmin?.steps;
+  const steps = manualSteps ?? garminSteps ?? opts.defaultSteps;
+  const stepsSource = manualSteps !== undefined ? 'manual' : garminSteps !== undefined ? 'garmin' : 'default';
+  const garmin = day?.garmin?.workouts ?? [];
+  const manual = day?.manual?.workouts ?? [];
+  const workoutSteps = [...garmin, ...manual].reduce((sum, w) => sum + (w.steps ?? 0), 0);
   const stepsKcal = Math.max(0, steps - workoutSteps) * kcalPerStep(opts.weightKg, opts.heightCm);
   const bmrPerMin = opts.bmrKcal / 1440;
-  const workoutsKcal = workouts.reduce((sum, w) => sum + Math.max(0, w.kcal - bmrPerMin * w.durationMin), 0);
-  return {
-    bmr: opts.bmrKcal,
-    steps,
-    stepsKcal,
-    workouts,
-    workoutsKcal,
-    out: opts.bmrKcal + stepsKcal + workoutsKcal,
-    source: 'measured',
-  };
+  const workouts: WorkoutBurn[] = [
+    // Garmin reports gross workout calories; its resting share is already in BMR.
+    ...garmin.map((w) => ({ type: w.type, kcal: Math.max(0, w.kcal - bmrPerMin * (w.durationMin ?? 0)), source: 'garmin' as const })),
+    // Manual workouts are the calories burned in the workout, as the owner enters them.
+    ...manual.map((w) => ({ type: w.type, kcal: Math.max(0, w.kcal), source: 'manual' as const })),
+  ];
+  const workoutsKcal = workouts.reduce((sum, w) => sum + w.kcal, 0);
+  return { bmr: opts.bmrKcal, steps, stepsSource, stepsKcal, workouts, workoutsKcal, out: opts.bmrKcal + stepsKcal + workoutsKcal };
 }

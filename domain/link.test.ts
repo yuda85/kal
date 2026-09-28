@@ -112,6 +112,11 @@ describe('validatePayload', () => {
     expect(out).not.toBe(input);
     expect(out.ops[0]).not.toBe(input.ops[0]);
   });
+
+  it('accepts a workout without a duration', () => {
+    const op = { op: 'activity', id: 'checkin', date: '2026-09-27', workouts: [{ type: 'Push', kcal: 350 }] };
+    expect(validatePayload({ v: 1, ops: [op] })).toEqual({ v: 1, ops: [op] });
+  });
 });
 
 describe('fillDefaults', () => {
