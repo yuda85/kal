@@ -1,16 +1,29 @@
-import { Component, computed, inject } from '@angular/core';
-import { LucidePlus } from '@lucide/angular';
+import { Component, computed, effect, inject } from '@angular/core';
+import { LucideMoon, LucidePlus, LucideScale } from '@lucide/angular';
 import { KalState } from '../../core/kal-state';
+import { settingsOf } from '../../domain';
 import { BulletBar } from '../../shared/bullet-bar';
 import { fmt, warningText } from '../../shared/format';
+import { realityLine } from '../../shared/reality-line';
+import { shouldPromptCheckIn } from '../checkin/checkin.logic';
+import { CheckInService } from '../checkin/checkin.service';
 import { QuickAddService } from './quick-add.service';
-import { breakdownText, staleSyncHours } from './today.logic';
+import { staleSyncHours, waterfallRows } from './today.logic';
+import { Waterfall } from './waterfall';
 
 @Component({
   selector: 'app-today',
-  imports: [BulletBar, LucidePlus],
+  imports: [BulletBar, LucidePlus, LucideScale, LucideMoon, Waterfall],
   template: `
     @if (summary(); as s) {
+      <div class="row top">
+        <button type="button" class="chip" [class.missing]="!weighIn()" (click)="quickAdd.open('weight')">
+          <svg lucideScale [size]="16"></svg>
+          @if (weighIn(); as w) { <span class="num">{{ fmt(w.kg, 1) }}</span> ק״ג } @else { + שקילה היום }
+        </button>
+        <button type="button" class="chip" (click)="checkin.show()"><svg lucideMoon [size]="16"></svg> סגירת יום</button>
+      </div>
+
       <section class="hero">
         <div class="muted small">נשאר לאכול</div>
         <div class="big num" [class.over]="s.remainingKcal < 0">{{ fmt(s.remainingKcal) }}</div>
@@ -18,12 +31,13 @@ import { breakdownText, staleSyncHours } from './today.logic';
           יעד <span class="num">{{ fmt(s.targetKcal) }}</span> = יצא <span class="num">{{ fmt(s.expenditure.out) }}</span>
           − גירעון <span class="num">{{ fmt(s.deficitKcal) }}</span>
         </div>
+        <p class="alert reality" [class]="reality().tone">{{ reality().text }}</p>
       </section>
 
       @if (staleHours(); as h) {
         <div class="alert warning row">
           <span>סנכרון Garmin אחרון לפני <span class="num">{{ h }}</span> שעות</span>
-          <button type="button" (click)="quickAdd.open('meal')">הזנה ידנית</button>
+          <button type="button" (click)="checkin.show()">הזנה ידנית</button>
         </div>
       }
       @for (w of s.warnings; track $index) {
@@ -40,7 +54,7 @@ import { breakdownText, staleSyncHours } from './today.logic';
         }
       </section>
 
-      <p class="breakdown muted small">{{ breakdown() }}</p>
+      <app-waterfall [rows]="waterfall()" />
 
       <ul class="entries">
         @for (e of s.entries; track e.id) {
@@ -62,10 +76,13 @@ import { breakdownText, staleSyncHours } from './today.logic';
   styles: `
     :host { display: block; padding-block-end: 72px; } /* keep the last entry clear of the FAB */
     .hero { text-align: center; padding: 16px 0 8px; }
-    .big { font-size: 34px; font-weight: 500; color: var(--out); }
+    .big { font-size: 34px; font-weight: 500; color: var(--fg); }
     .big.over { color: var(--danger); }
     .bars { margin-block: 12px; }
-    .breakdown { background: var(--card); border-radius: var(--radius); padding: 6px 8px; }
+    .top { margin-block: 8px; }
+    .chip { min-height: 44px; border-radius: 999px; padding: 0 12px; display: inline-flex; gap: 6px; align-items: center; }
+    .chip.missing { border-color: var(--primary); color: var(--primary); }
+    .reality { margin-block: 8px 0; }
     .entries { list-style: none; margin: 12px 0 0; padding: 0; border-block-start: 1px solid var(--border); }
     .entry { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; width: 100%; border: none;
       border-block-end: 1px solid var(--border); border-radius: 0; background: none; text-align: start; }
@@ -79,9 +96,22 @@ export class Today {
   protected readonly fmt = fmt;
   protected readonly warningText = warningText;
   protected readonly summary = this.state.todaySummary;
-  protected readonly breakdown = computed(() => {
-    const s = this.summary();
-    return s ? breakdownText(s) : '';
-  });
   protected readonly staleHours = computed(() => staleSyncHours(this.state.profile()?.garminLastSyncAt, this.state.now()));
+  protected readonly checkin = inject(CheckInService);
+  protected readonly weighIn = this.state.todayWeighIn;
+  protected readonly reality = computed(() => realityLine(this.state.reality()));
+  protected readonly waterfall = computed(() => {
+    const s = this.summary();
+    const profile = this.state.profile();
+    return s && profile ? waterfallRows(s, settingsOf(profile).defaultSteps) : [];
+  });
+
+  constructor() {
+    effect(() => {
+      const today = this.state.today();
+      if (!this.checkin.open() && shouldPromptCheckIn(this.state.now(), this.state.todayDay(), this.checkin.dismissedFor() === today)) {
+        this.checkin.show();
+      }
+    });
+  }
 }
