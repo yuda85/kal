@@ -437,7 +437,7 @@ workout    = manual workouts: kcal as entered (the calories burned in that worko
 ### Reality check (domain)
 
 - Window: the last 14 days.
-- Status by weight trend only: `no_data` if fewer than 4 weigh-ins in the window; `gaining` if the trend rose more than 0.1 kg; `stalled` if it fell less than half the planned amount (the goal pace over the 14 days while the trend is above target); otherwise `on_track`.
+- Status by weight trend only: `no_data` if fewer than 4 weigh-ins in the window, or while the trend has no point before the window (a new goal's first two weeks); `gaining` if the trend rose more than 0.1 kg; `stalled` if it fell less than half the planned amount (the goal pace over the 14 days while the trend is above target); otherwise `on_track`.
 - Logged deficit per day = mean(out − counted intake); weight deficit per day = −(trend change) × 7700 / days.
 - The logged deficit uses only days on or after the goal start.
 - The alert "the log shows a deficit the scale does not confirm" uses the existing report-gap rule (gap > 300 kcal/day, from goal day 21).

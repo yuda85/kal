@@ -52,4 +52,17 @@ describe('realityCheck', () => {
     expect(atTarget.plannedChangeKg).toBe(0);
     expect(atTarget.status).toBe('on_track');
   });
+
+  it('waits for a trend point before the window, even with enough weigh-ins', () => {
+    const r = realityCheck({ today, goal: testGoal, weighIns: series(5, 88, 0.2), energy: [] });
+    expect(r.weighInCount).toBe(5);
+    expect(r.status).toBe('no_data');
+  });
+
+  it('turns a falling trend into a positive weight deficit', () => {
+    const r = realityCheck({ today, goal: testGoal, weighIns: series(30, 90, -0.05), energy: [] });
+    expect(r.trendChangeKg!).toBeLessThan(0);
+    expect(r.weightDeficitKcal!).toBeCloseTo((-r.trendChangeKg! * 7700) / 14, 6);
+    expect(r.weightDeficitKcal!).toBeGreaterThan(0);
+  });
 });

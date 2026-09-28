@@ -39,7 +39,7 @@ import { CheckInService } from './checkin.service';
       }
 
       @if (food(); as f) {
-        <p class="alert" [class.success]="f.ok" [class.danger]="!f.ok">{{ f.text }}</p>
+        <p class="alert" [class.neutral]="f.ok" [class.danger]="!f.ok">{{ f.text }}</p>
       }
 
       <label>משקל (לא חובה)
@@ -106,9 +106,8 @@ export class CheckIn {
     this.error.set(error);
     if (error) return;
     this.state.refreshNow();
-    // An unchanged weight is not written again (keeps the morning weigh-in time).
-    const toWrite = { ...draft, weightKg: draft.weightKg === this.initial.weightKg ? null : draft.weightKg };
-    this.repo.applyWrites(uid, checkInWrites(toWrite, this.date, this.state.now()), this.state.days()).catch(() => this.toast.show('השמירה נכשלה'));
+    // Only changed values are written: an unchanged weight keeps its morning time, and data saved elsewhere survives.
+    this.repo.applyWrites(uid, checkInWrites(draft, this.date, this.state.now(), this.initial), this.state.days()).catch(() => this.toast.show('השמירה נכשלה'));
     this.toast.show('נשמר');
     this.service.dismiss(this.date);
   }

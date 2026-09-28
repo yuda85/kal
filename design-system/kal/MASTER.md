@@ -61,7 +61,7 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 - **Bottom sheet (quick-add):** segmented tabs ארוחה · משקל (activity moved to the check-in sheet); macros hidden behind "+ מאקרו".
 - **Check-in sheet:** bottom sheet; steps input with the default as placeholder; workout type chips (44px); calories input only when a type is chosen; food status line (danger when the day would be penalized); optional weight; לא עכשיו · שמירה.
 - **Waterfall (Today):** rows BMR / steps / workouts / deficit / target; signed values next to every bar; defaulted steps carry a note.
-- **Month calendar:** 7-column grid from Sunday; each cell shows the day number and the workout type as text; background is supplementary (deficit / surplus / not logged "!"). Deficit days get a neutral `--out` tint, never the success chip colors: only the weight reality check may look like "on track".
+- **Month calendar:** 7-column grid from Sunday; each cell shows the day number and the workout type as text; background is supplementary (deficit / surplus / not logged "!"). Deficit days get a grey `--neutral-bar` tint, never green: only the weight reality check may look like "on track". The check-in food line is neutral when the day is logged, danger when it would be penalized.
 - **Toast:** short, past tense ("נשמר"), 3s, above the bottom nav.
 - **Confirm dialog:** only for delete.
 

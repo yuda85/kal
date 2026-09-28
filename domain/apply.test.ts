@@ -56,6 +56,11 @@ describe('planWrites', () => {
     const existing = { steps: 5000, workouts: [{ type: 'Push', kcal: 350, linkId: 'checkin' }] };
     expect(mergeManual(existing, steps.activities[0])).toEqual({ steps: 9000, workouts: existing.workouts });
   });
+
+  it('does not close the day for a check-in op without steps', () => {
+    const midday = planWrites({ v: 1, ops: [{ op: 'activity', id: 'checkin', date: '2026-09-27', workouts: [{ type: 'Push', kcal: 350 }] }] }, { source: 'link', time: '13:00' });
+    expect(midday.checkIns).toEqual([]);
+  });
 });
 
 describe('mergeManual', () => {

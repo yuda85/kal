@@ -35,4 +35,22 @@ describe('Today', () => {
     await render();
     expect(TestBed.inject(CheckInService).open()).toBe(false);
   });
+
+  it('closes a sheet it opened by itself once the day turns out to be checked in', async () => {
+    await render(new Date('2026-09-27T19:30:00Z'));
+    const service = TestBed.inject(CheckInService);
+    expect(service.open()).toBe(true);
+    TestBed.inject(KalState).days.update((days) => days.map((d) => ({ ...d, checkedInAt: '2026-09-27T19:31:00Z' })));
+    TestBed.tick();
+    expect(service.open()).toBe(false);
+  });
+
+  it('keeps a sheet the owner opened on a checked-in day', async () => {
+    await render();
+    TestBed.inject(KalState).days.update((days) => days.map((d) => ({ ...d, checkedInAt: '2026-09-27T09:00:00Z' })));
+    const service = TestBed.inject(CheckInService);
+    service.show();
+    TestBed.tick();
+    expect(service.open()).toBe(true);
+  });
 });

@@ -72,4 +72,14 @@ describe('read commands', () => {
     await expect(run(['nope'], { reader: fakeReader(), now })).rejects.toThrow('unknown command');
     await expect(run(['day', '2026-13-01'], { reader: fakeReader(), now })).rejects.toThrow('invalid date');
   });
+
+  it('profile: counts an under-logged day as the penalty in the reality check', async () => {
+    const weights = ['2026-09-10', '2026-09-20', '2026-09-24', '2026-09-26', '2026-09-27'].map((id) => ({ id, data: { kg: 85 } }));
+    const entries = [{ id: 'c1', data: { date: '2026-09-26', time: '08:00', name: 'קפה', kcal: 2, protein: null, carbs: null, fat: null, source: 'link' } }];
+    const out = (await run(['profile'], { reader: fakeReader({ weights, entries }), now })) as any;
+    // 13 finished days 09-14..09-26, none logged: every day counts 3,200 in
+    expect(out.reality.loggedDeficitKcal).toBeLessThan(0);
+    const day = (await run(['day', '2026-09-26'], { reader: fakeReader({ weights, entries }), now })) as any;
+    expect(out.reality.loggedDeficitKcal).toBeCloseTo(day.expenditure.out - 3200, 0);
+  });
 });

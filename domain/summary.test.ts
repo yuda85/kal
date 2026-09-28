@@ -184,6 +184,20 @@ describe('summarizeWeek', () => {
     // trend −0.088 kg over the 4 days from 09-26 to 09-30
     expect(ww.weightDeficitKcal).toBeCloseTo((0.088 * 7700) / 4, 1);
   });
+
+  it('measures the weight trend from the first weigh-in when none came before the week', () => {
+    const inside = [{ date: '2026-09-27', kg: 85 }, { date: '2026-09-29', kg: 84.5 }];
+    const ww = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days: [], profile: testProfile, goal: testGoal, weighIns: inside });
+    // EWMA 85 → 84.95: −0.05 kg from 09-27 to 09-30 (3 days)
+    expect(ww.trendChangeKg).toBeCloseTo(-0.05, 6);
+    expect(ww.weightDeficitKcal).toBeCloseTo((0.05 * 7700) / 3, 4);
+  });
+
+  it('reports no trend change from a single weigh-in', () => {
+    const one = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days: [], profile: testProfile, goal: testGoal, weighIns: [{ date: '2026-09-29', kg: 85 }] });
+    expect(one.trendChangeKg).toBeNull();
+    expect(one.weightDeficitKcal).toBeNull();
+  });
 });
 
 describe('summarizeMonth', () => {

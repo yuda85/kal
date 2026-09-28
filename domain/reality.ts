@@ -38,7 +38,8 @@ export function realityCheck(input: { today: string; goal: Goal; weighIns: Weigh
   const loggedDeficitKcal = energy.length === 0 ? null : energy.reduce((s, e) => s + (e.outKcal - e.inKcal), 0) / energy.length;
   const weightDeficitKcal = trendChangeKg === null || span <= 0 ? null : (-trendChangeKg * KCAL_PER_KG) / span;
   let status: RealityStatus;
-  if (weighInCount < REALITY_MIN_WEIGHINS || trendChangeKg === null) status = 'no_data';
+  // A trend that starts inside the window is too short to judge the 14-day pace.
+  if (weighInCount < REALITY_MIN_WEIGHINS || trendChangeKg === null || before === null) status = 'no_data';
   else if (trendChangeKg > 0.1) status = 'gaining';
   else if (plannedChangeKg < 0 && trendChangeKg > plannedChangeKg * 0.5) status = 'stalled';
   else status = 'on_track';

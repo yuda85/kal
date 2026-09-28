@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { seededRepository } from '../../../testing/fake-repository';
+import { seededRepository, type FakeRepository } from '../../../testing/fake-repository';
 import { KalState } from '../../core/kal-state';
 import { KalRepository } from '../../core/repository';
 import { Toast } from '../../core/toast';
@@ -8,11 +8,12 @@ import { CheckInService } from './checkin.service';
 
 afterEach(() => vi.useRealTimers());
 
-async function open() {
+async function open(prepare: (repo: FakeRepository) => void = () => undefined) {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-09-27T19:30:00Z'));
   const repo = seededRepository();
   repo.writeMode = 'hang';
+  prepare(repo);
   TestBed.configureTestingModule({ imports: [CheckIn], providers: [{ provide: KalRepository, useValue: repo }] });
   const state = TestBed.inject(KalState);
   state.start('u1');
@@ -54,6 +55,22 @@ describe('CheckIn', () => {
     el.querySelector<HTMLButtonElement>('button[data-action="later"]')!.click();
     await fixture.whenStable();
     expect(TestBed.inject(CheckInService).dismissedFor()).toBe('2026-09-27');
+  });
+
+  it('reports a logged day neutrally, never as a success', async () => {
+    const { el } = await open((repo) => {
+      repo.entries = [...repo.entries, { id: 'lunch001', date: '2026-09-27', time: '13:00', name: 'צהריים', kcal: 600, protein: null, carbs: null, fat: null, source: 'link' }];
+    });
+    expect(el.querySelector('.alert.neutral')?.textContent).toContain('920');
+    expect(el.querySelector('.alert.success')).toBeNull();
+  });
+
+  it('saving without changes keeps the steps and workouts stored for the day', async () => {
+    const { fixture, repo, el } = await open();
+    el.querySelector<HTMLButtonElement>('button.primary')!.click();
+    await fixture.whenStable();
+    expect(repo.applied[0].writes.activities).toEqual([{ date: '2026-09-27', linkId: 'checkin' }]);
+    expect(repo.applied[0].writes.weights).toEqual([]);
   });
 });
 

@@ -3,6 +3,8 @@ import { Injectable, signal } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class CheckInService {
   readonly open = signal(false);
+  /** True when the sheet opened by itself at check-in time, not from a button. */
+  readonly auto = signal(false);
   /** The date the owner closed or saved the check-in for in this app session. */
   readonly dismissedFor = signal<string | null>(null);
 
@@ -13,7 +15,8 @@ export class CheckInService {
     });
   }
 
-  show(): void {
+  show(auto = false): void {
+    this.auto.set(auto);
     this.open.set(true);
   }
 

@@ -60,7 +60,7 @@ Collect ingredients with raw grams and the yield: number of units (with a unit n
 {"op":"activity","id":"checkin","steps":9200,"workouts":[{"type":"Push","kcal":350}]}
 ```
 
-- A day summary uses `"id":"checkin"` and marks the day checked in. `steps` replaces the day's steps; `workouts` replaces the day's check-in workouts (`[]` removes them); an op without `workouts` keeps them. `kcal` is the calories burned in the workout as the owner reads them in Garmin; no duration needed. Types: Upper, Lower, Push, Pull, Legs, Full body, Cardio, אחר.
+- Every `activity` op uses `"id":"checkin"`, with `"date"` for a past day. `steps` replaces the day's steps; `workouts` replaces the day's check-in workouts, so send the day's full list (run `read.ts day <date>` first and keep the manual workouts already there); `[]` removes them; an op without `workouts` keeps them. An op with `steps` closes the day (the app stops its 22:00 prompt); a workout logged during the day without steps does not. `kcal` is the calories burned in the workout as the owner reads them in Garmin; no duration needed. Types: Upper, Lower, Push, Pull, Legs, Full body, Cardio, אחר.
 - A day without steps counts as 3,500 steps. A finished day with less than 800 kcal of food counts as 3,200 (the owner's penalty rule); logging real food removes it.
 
 ## Questions (no link)

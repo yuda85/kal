@@ -11,4 +11,8 @@ describe('realityLine', () => {
     expect(realityLine({ status: 'stalled', trendChangeKg: -0.2, plannedChangeKg: -0.9 } as never)).toEqual({ text: 'המשקל כמעט לא ירד: -0.2 ק״ג ב-14 יום, התוכנית -0.9', tone: 'warning' });
     expect(realityLine({ status: 'on_track', trendChangeKg: -1, plannedChangeKg: -0.9 } as never).tone).toBe('success');
   });
+
+  it('explains that a trend younger than the window cannot judge yet', () => {
+    expect(realityLine({ status: 'no_data', weighInCount: 6 } as never)).toEqual({ text: 'צריך שקילות לאורך 14 יום כדי לדעת אם אתה בקצב (יש 6 שקילות)', tone: 'neutral' });
+  });
 });

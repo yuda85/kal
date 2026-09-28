@@ -174,9 +174,12 @@ function summarizeRange(start: string, end: string, input: RangeInput): RangeSum
   const series = trendSeries(input.weighIns);
   const weighedInRange = input.weighIns.some((w) => w.date >= start && w.date <= lastDate);
   const trendEnd = weighedInRange ? trendOn(series, lastDate) : null;
-  const trendStart = trendOn(series, addDays(start, -1));
-  const trendChangeKg = trendEnd !== null && trendStart !== null ? trendEnd - trendStart : null;
-  const span = daysBetween(addDays(start, -1), lastDate);
+  const before = trendOn(series, addDays(start, -1));
+  // Without a trend point before the range, measure from the first of at least two weigh-ins inside it.
+  const inRange = series.filter((p) => p.date >= start && p.date <= lastDate);
+  const from = before !== null ? { date: addDays(start, -1), kg: before } : inRange.length > 1 ? inRange[0] : null;
+  const span = from ? daysBetween(from.date, lastDate) : 0;
+  const trendChangeKg = trendEnd !== null && from !== null && span > 0 ? trendEnd - from.kg : null;
   return {
     start,
     end,

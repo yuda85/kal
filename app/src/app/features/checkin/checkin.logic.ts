@@ -30,17 +30,23 @@ export function checkInError(d: CheckInDraft): string | null {
   return null;
 }
 
-export function checkInWrites(d: CheckInDraft, date: string, now: Date): PlannedWrites {
+/** With `initial`, only what the owner changed is written, so values saved elsewhere meanwhile survive. */
+export function checkInWrites(d: CheckInDraft, date: string, now: Date, initial?: CheckInDraft): PlannedWrites {
+  const stepsChanged = d.steps !== null && d.steps !== initial?.steps;
+  const workoutChanged = !initial || d.workoutType !== initial.workoutType || d.workoutKcal !== initial.workoutKcal;
+  const weightChanged = d.weightKg !== null && d.weightKg !== initial?.weightKg;
   return {
     entries: [],
     recipes: [],
-    weights: d.weightKg !== null ? [{ date, kg: d.weightKg, time: localTime(now) }] : [],
+    weights: weightChanged ? [{ date, kg: d.weightKg!, time: localTime(now) }] : [],
     activities: [
       {
         date,
         linkId: CHECKIN_LINK_ID,
-        ...(d.steps !== null ? { steps: d.steps } : {}),
-        workouts: d.workoutType !== null ? [{ type: d.workoutType, kcal: d.workoutKcal!, linkId: CHECKIN_LINK_ID }] : [],
+        ...(stepsChanged ? { steps: d.steps! } : {}),
+        ...(workoutChanged
+          ? { workouts: d.workoutType !== null ? [{ type: d.workoutType, kcal: d.workoutKcal!, linkId: CHECKIN_LINK_ID }] : [] }
+          : {}),
       },
     ],
     checkIns: [date],

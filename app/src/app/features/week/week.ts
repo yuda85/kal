@@ -117,8 +117,8 @@ import { canGoBack, canGoBackMonth, monthView, shiftMonth, weekView, type WeekVi
     .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
     .cal.head { font-size: 11px; color: var(--fg-muted); text-align: center; margin-block-end: 3px; }
     .cell { min-height: 44px; border-radius: 6px; padding: 2px 4px; font-size: 11px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border); }
-    /* Deficit is what the log says, not a verdict: a neutral tint, never the success token. */
-    .cell.deficit { background: color-mix(in srgb, var(--out) 12%, transparent); }
+    /* Deficit is what the log says, not a verdict: a grey tint; only the weight reality check may look like "on track". */
+    .cell.deficit { background: color-mix(in srgb, var(--neutral-bar) 15%, transparent); }
     .cell.surplus { background: var(--warning-bg); color: var(--warning-fg); }
     .cell.imputed { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); font-weight: 500; }
     .cell.today { outline: 2px solid var(--primary); }

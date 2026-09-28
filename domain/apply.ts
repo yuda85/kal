@@ -68,7 +68,8 @@ export function planWrites(payload: Payload, opts: { source: 'link' | 'form'; ti
           ...(op.steps !== undefined ? { steps: op.steps } : {}),
           ...(op.workouts !== undefined ? { workouts: op.workouts.map((w) => ({ ...w, linkId: op.id })) } : {}),
         });
-        if (op.id === CHECKIN_LINK_ID) out.checkIns.push(op.date);
+        // Only a day summary with steps closes the day; a workout logged mid-day keeps the evening prompt.
+        if (op.id === CHECKIN_LINK_ID && op.steps !== undefined) out.checkIns.push(op.date);
         break;
     }
   }

@@ -34,4 +34,12 @@ describe('check-in logic', () => {
   it('clears the check-in workout when "no workout" is chosen', () => {
     expect(checkInWrites({ steps: null, workoutType: null, workoutKcal: null, weightKg: null }, '2026-09-28', late).activities[0].workouts).toEqual([]);
   });
+
+  it('leaves unchanged values alone so data saved elsewhere survives', () => {
+    const initial = { steps: 8000, workoutType: null, workoutKcal: null, weightKg: 92.2 };
+    const w = checkInWrites({ ...initial }, '2026-09-28', late, initial);
+    expect(w.activities).toEqual([{ date: '2026-09-28', linkId: 'checkin' }]);
+    expect(w.weights).toEqual([]);
+    expect(w.checkIns).toEqual(['2026-09-28']);
+  });
 });

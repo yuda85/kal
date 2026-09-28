@@ -109,8 +109,12 @@ export class Today {
   constructor() {
     effect(() => {
       const today = this.state.today();
-      if (!this.checkin.open() && shouldPromptCheckIn(this.state.now(), this.state.todayDay(), this.checkin.dismissedFor() === today)) {
-        this.checkin.show();
+      const day = this.state.todayDay();
+      if (this.checkin.open()) {
+        // A sheet that opened by itself goes away once the day turns out to be checked in (e.g. on another device).
+        if (this.checkin.auto() && day?.checkedInAt) this.checkin.close();
+      } else if (shouldPromptCheckIn(this.state.now(), day, this.checkin.dismissedFor() === today)) {
+        this.checkin.show(true);
       }
     });
   }
