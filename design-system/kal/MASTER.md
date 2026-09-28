@@ -58,7 +58,10 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 - **Bullet bar:** 8px track (`--card` on `--bg` contrast), fill color by meaning, 2px marker for caps/targets, label and `value / target` text above.
 - **KPI card:** muted 11–12px label, 16–20px/500 value, one-line context below.
 - **Entry row:** time (muted, tabular) · name · kcal (end-aligned); hairline divider.
-- **Bottom sheet (quick-add):** segmented tabs ארוחה · משקל · פעילות; macros hidden behind "+ מאקרו".
+- **Bottom sheet (quick-add):** segmented tabs ארוחה · משקל (activity moved to the check-in sheet); macros hidden behind "+ מאקרו".
+- **Check-in sheet:** bottom sheet; steps input with the default as placeholder; workout type chips (44px); calories input only when a type is chosen; food status line (danger when the day would be penalized); optional weight; לא עכשיו · שמירה.
+- **Waterfall (Today):** rows BMR / steps / workouts / deficit / target; signed values next to every bar; defaulted steps carry a note.
+- **Month calendar:** 7-column grid from Sunday; each cell shows the day number and the workout type as text; background is supplementary (deficit / surplus / not logged "!"). Deficit days get a neutral `--out` tint, never the success chip colors: only the weight reality check may look like "on track".
 - **Toast:** short, past tense ("נשמר"), 3s, above the bottom nav.
 - **Confirm dialog:** only for delete.
 
@@ -67,7 +70,7 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 | Screen | Chart | Encoding |
 |---|---|---|
 | Today | Bullet bars (CSS) | kcal `--out`, protein/carbs/fat `--in` or `--neutral-bar`, cap marker |
-| Week | Grouped bars | in `--in`, out `--out`; missing day = dashed `--danger` outline + text alert |
+| Week | Grouped bars | in `--in` (counted intake: a penalized day shows 3,200), out `--out`; penalized day = dashed `--danger` outline + marked row |
 | Weight | Line | trend solid `--out` 2.5px · plan dashed `--primary` · target dotted `--neutral-bar` · weigh-ins dots `--neutral-bar` |
 
 Every chart has a text summary next to it (hero number, status chip, or KPI cards) so no information lives only in the chart.
