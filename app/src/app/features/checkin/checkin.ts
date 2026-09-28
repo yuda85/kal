@@ -42,6 +42,9 @@ import { CheckInService } from './checkin.service';
           </label>
         </div>
         <p class="muted small hint">יש "קלוריות פעילות"? הזן אותן בלי משך. אחרת הזן את סך הקלוריות ואת המשך, וחלק המנוחה ירד.</p>
+        @if (draft().workoutType === 'Cardio') {
+          <p class="muted small hint">הליכה או ריצה? הצעדים שלה כבר נספרים בצעדים היומיים. רשום כאן רק אימון שאינו צעדים (אופניים, חתירה, שחייה).</p>
+        }
       }
 
       @if (food(); as f) {

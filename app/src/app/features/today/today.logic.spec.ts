@@ -34,6 +34,11 @@ describe('today logic', () => {
   it('shows fewer steps than the default as a minus row with the count', () => {
     const e = { bmr: 1915, dailyLifeKcal: 383, steps: 2000, stepsSource: 'manual', stepsKcal: -49, workouts: [], workoutsKcal: 0, out: 2249 };
     const rows = waterfallRows(summary({ expenditure: e, targetKcal: 1240 }), 3500);
-    expect(rows[2]).toEqual({ label: 'צעדים', value: -49, kind: 'minus', note: '2,000 מתוך בסיס 3,500' });
+    expect(rows[2]).toEqual({ label: 'צעדים', value: -49, kind: 'minus', note: '2,000 · בסיס 3,500' });
+  });
+
+  it('never prints a signed zero for the steps row', () => {
+    const e = { bmr: 1915, dailyLifeKcal: 383, steps: 3490, stepsSource: 'manual', stepsKcal: -0.3, workouts: [], workoutsKcal: 0, out: 2297.7 };
+    expect(Object.is(waterfallRows(summary({ expenditure: e }), 3500)[2].value, 0)).toBe(true);
   });
 });

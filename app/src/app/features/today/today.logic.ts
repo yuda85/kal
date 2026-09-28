@@ -22,12 +22,12 @@ export function waterfallRows(s: DaySummary, defaultSteps: number): WaterfallRow
     { label: 'BMR', value: Math.round(e.bmr), kind: 'base' },
     { label: 'יומיום ועיכול', value: Math.round(e.dailyLifeKcal), kind: 'plus' },
   ];
-  const stepsKcal = Math.round(e.stepsKcal);
+  const stepsKcal = Math.round(e.stepsKcal) || 0; // no signed zero
   rows.push({
     label: 'צעדים',
     value: stepsKcal,
     kind: stepsKcal < 0 ? 'minus' : 'plus',
-    note: e.stepsSource === 'default' ? `${fmt(defaultSteps)} · לא הוזנו` : `${fmt(e.steps)} מתוך בסיס ${fmt(defaultSteps)}`,
+    note: e.stepsSource === 'default' ? `${fmt(defaultSteps)} · לא הוזנו` : `${fmt(e.steps)} · בסיס ${fmt(defaultSteps)}`,
   });
   for (const w of e.workouts) rows.push({ label: w.type, value: Math.round(w.kcal), kind: 'plus' });
   rows.push({ label: 'גירעון', value: -Math.round(s.deficitKcal), kind: 'minus' });

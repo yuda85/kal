@@ -422,14 +422,14 @@ Changed 2026-09-28 after the owner's review. BMR plus steps left out digestion a
 ### Daily check-in
 
 - Opening the app from 22:00 (Asia/Jerusalem) shows a "close the day" sheet until that day is checked in. "Not now" closes it until the next app open. A button on Today opens it any time.
-- Fields: steps; workout (none or a type) and its calories; optional weigh-in; a food status line ("X kcal logged" or "nothing logged, the day will count as 3,200").
+- Fields: steps; workout (none or a type), its calories and an optional duration (a walk or run is logged as steps, not as a workout); optional weigh-in; a food status line ("X kcal logged" or "nothing logged, the day will count as 3,200").
 - Saving writes `days/{date}.manual.steps`, the check-in workout (tagged `linkId: "checkin"`, so saving again replaces it) and `checkedInAt`. It can be edited any time.
 - Claude can do the same through an `activity` link op.
 - The quick-add sheet no longer has an activity tab; steps and workouts go through the check-in, or through Claude with `id: "checkin"` for a past day. An `activity` op without `workouts` keeps the day's workouts; `workouts: []` removes them.
 
 ### UI
 
-- Today: a weigh-in chip at the top ("+ weigh-in today" when missing); a reality line under the budget; a waterfall "how today's target is built" (BMR, steps with a mark when defaulted, each workout, minus deficit, equals target); a "close the day" button.
+- Today: a weigh-in chip at the top ("+ weigh-in today" when missing); a reality line under the budget; a waterfall "how today's target is built" (BMR, daily life and digestion, steps against the 3,500 base with a mark when defaulted, each workout, minus deficit, equals target); a "close the day" button.
 - Week tab gets a Week | Month switch.
   - Week: workouts count and the type per day, penalized days marked, logged deficit next to the weight deficit, the report-gap alert.
   - Month: a calendar grid, each day showing its workout type, a background for deficit / surplus / not logged, and totals (workouts, workouts per week, days not logged, logged vs weight deficit).

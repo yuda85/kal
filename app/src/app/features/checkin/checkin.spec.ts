@@ -75,6 +75,13 @@ describe('CheckIn', () => {
     expect(repo.applied[0].writes.activities).toEqual([{ date: '2026-09-27', linkId: 'checkin' }]);
     expect(repo.applied[0].writes.weights).toEqual([]);
   });
+
+  it('tells the owner to log a walk or run as steps, so it is not counted twice', async () => {
+    const { fixture, el } = await open();
+    el.querySelector<HTMLButtonElement>('button[data-type="Cardio"]')!.click();
+    await fixture.whenStable();
+    expect(el.textContent).toContain('הליכה או ריצה');
+  });
 });
 
 describe('CheckInService', () => {

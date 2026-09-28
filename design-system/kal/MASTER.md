@@ -59,7 +59,7 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 - **KPI card:** muted 11–12px label, 16–20px/500 value, one-line context below.
 - **Entry row:** time (muted, tabular) · name · kcal (end-aligned); hairline divider.
 - **Bottom sheet (quick-add):** segmented tabs ארוחה · משקל (activity moved to the check-in sheet); macros hidden behind "+ מאקרו".
-- **Check-in sheet:** bottom sheet; steps input with the default as placeholder; workout type chips (44px); calories input only when a type is chosen; food status line (danger when the day would be penalized); optional weight; לא עכשיו · שמירה.
+- **Check-in sheet:** bottom sheet; steps input with the default as placeholder; workout type chips (44px); calories and optional duration inputs only when a type is chosen, with the active-vs-total hint (and a walk/run-as-steps hint for Cardio); food status line (danger when the day would be penalized); optional weight; לא עכשיו · שמירה.
 - **Waterfall (Today):** rows BMR / יומיום ועיכול / steps against the 3,500 base (minus when fewer) / workouts / deficit / target; signed values next to every bar; the steps row notes the count or "לא הוזנו".
 - **Month calendar:** 7-column grid from Sunday; each cell shows the day number and the workout type as text; background is supplementary (deficit / surplus / not logged "!"). Deficit days get a grey `--neutral-bar` tint, never green: only the weight reality check may look like "on track". The check-in food line is neutral when the day is logged, danger when it would be penalized.
 - **Toast:** short, past tense ("נשמר"), 3s, above the bottom nav.
