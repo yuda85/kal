@@ -33,9 +33,15 @@ import { CheckInService } from './checkin.service';
         </div>
       </div>
       @if (draft().workoutType !== null) {
-        <label>קלוריות שנשרפו באימון (מ-Garmin)
-          <input name="workoutKcal" type="number" inputmode="decimal" [value]="draft().workoutKcal ?? ''" (input)="patch('workoutKcal', num($any($event.target).value))" />
-        </label>
+        <div class="grid">
+          <label>קלוריות מ-Garmin
+            <input name="workoutKcal" type="number" inputmode="decimal" [value]="draft().workoutKcal ?? ''" (input)="patch('workoutKcal', num($any($event.target).value))" />
+          </label>
+          <label>משך (דק׳)
+            <input name="workoutMin" type="number" inputmode="numeric" [value]="draft().workoutMin ?? ''" (input)="patch('workoutMin', num($any($event.target).value))" />
+          </label>
+        </div>
+        <p class="muted small hint">יש "קלוריות פעילות"? הזן אותן בלי משך. אחרת הזן את סך הקלוריות ואת המשך, וחלק המנוחה ירד.</p>
       }
 
       @if (food(); as f) {
@@ -60,6 +66,8 @@ import { CheckInService } from './checkin.service';
     .sheet { position: fixed; inset-inline: 0; inset-block-end: 0; max-width: 480px; margin-inline: auto; z-index: 11;
       border-radius: 20px 20px 0 0; padding-block-end: calc(16px + env(safe-area-inset-bottom)); max-height: 90dvh; overflow-y: auto; }
     .tight { gap: 6px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .hint { margin: 0; }
     .label { font-size: 13px; color: var(--fg-muted); }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .chip { min-height: 44px; border-radius: 999px; padding: 0 12px; font-size: 13px; }

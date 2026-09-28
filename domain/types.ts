@@ -21,7 +21,7 @@ export interface Profile {
   bodyFatPct?: number;
   activityLevel?: ActivityLevel;
   constraints: Constraints;
-  settings: { lowDayThresholdKcal: number; defaultSteps?: number; missingDayKcal?: number };
+  settings: { lowDayThresholdKcal: number; defaultSteps?: number; missingDayKcal?: number; baseFactor?: number };
   activeGoalId?: string;
   garminLastSyncAt?: string;
 }

@@ -18,10 +18,17 @@ export interface WaterfallRow {
 
 export function waterfallRows(s: DaySummary, defaultSteps: number): WaterfallRow[] {
   const e = s.expenditure;
-  const rows: WaterfallRow[] = [{ label: 'BMR', value: Math.round(e.bmr), kind: 'base' }];
-  const steps: WaterfallRow = { label: 'צעדים', value: Math.round(e.stepsKcal), kind: 'plus' };
-  if (e.stepsSource === 'default') steps.note = `${fmt(defaultSteps)} · לא הוזנו`;
-  rows.push(steps);
+  const rows: WaterfallRow[] = [
+    { label: 'BMR', value: Math.round(e.bmr), kind: 'base' },
+    { label: 'יומיום ועיכול', value: Math.round(e.dailyLifeKcal), kind: 'plus' },
+  ];
+  const stepsKcal = Math.round(e.stepsKcal);
+  rows.push({
+    label: 'צעדים',
+    value: stepsKcal,
+    kind: stepsKcal < 0 ? 'minus' : 'plus',
+    note: e.stepsSource === 'default' ? `${fmt(defaultSteps)} · לא הוזנו` : `${fmt(e.steps)} מתוך בסיס ${fmt(defaultSteps)}`,
+  });
   for (const w of e.workouts) rows.push({ label: w.type, value: Math.round(w.kcal), kind: 'plus' });
   rows.push({ label: 'גירעון', value: -Math.round(s.deficitKcal), kind: 'minus' });
   const clamp = Math.round(s.targetKcal - (e.out - s.deficitKcal));

@@ -13,33 +13,47 @@ describe('check-in logic', () => {
 
   it('prefills from the day and today\'s weigh-in', () => {
     const day = { date: '2026-09-28', manual: { steps: 8000, workouts: [{ type: 'Push', kcal: 350, linkId: 'checkin' }] } };
-    expect(initialCheckIn(day, { date: '2026-09-28', kg: 92.2 })).toEqual({ steps: 8000, workoutType: 'Push', workoutKcal: 350, weightKg: 92.2 });
-    expect(initialCheckIn(undefined, undefined)).toEqual({ steps: null, workoutType: null, workoutKcal: null, weightKg: null });
+    expect(initialCheckIn(day, { date: '2026-09-28', kg: 92.2 })).toEqual({ steps: 8000, workoutType: 'Push', workoutKcal: 350, workoutMin: null, weightKg: 92.2 });
+    expect(initialCheckIn(undefined, undefined)).toEqual({ steps: null, workoutType: null, workoutKcal: null, workoutMin: null, weightKg: null });
   });
 
   it('validates steps, workout calories and weight', () => {
-    expect(checkInError({ steps: -1, workoutType: null, workoutKcal: null, weightKg: null })).toContain('צעדים');
-    expect(checkInError({ steps: 8000, workoutType: 'Push', workoutKcal: null, weightKg: null })).toContain('אימון');
-    expect(checkInError({ steps: null, workoutType: null, workoutKcal: null, weightKg: 20 })).toContain('משקל');
-    expect(checkInError({ steps: 8000, workoutType: 'Push', workoutKcal: 350, weightKg: 92 })).toBeNull();
+    expect(checkInError({ steps: -1, workoutType: null, workoutKcal: null, workoutMin: null, weightKg: null })).toContain('צעדים');
+    expect(checkInError({ steps: 8000, workoutType: 'Push', workoutKcal: null, workoutMin: null, weightKg: null })).toContain('אימון');
+    expect(checkInError({ steps: null, workoutType: null, workoutKcal: null, workoutMin: null, weightKg: 20 })).toContain('משקל');
+    expect(checkInError({ steps: 8000, workoutType: 'Push', workoutKcal: 350, workoutMin: null, weightKg: 92 })).toBeNull();
   });
 
   it('writes steps, a replaceable check-in workout, the weigh-in and the check-in mark', () => {
-    const w = checkInWrites({ steps: 8000, workoutType: 'Push', workoutKcal: 350, weightKg: 92.2 }, '2026-09-28', late);
+    const w = checkInWrites({ steps: 8000, workoutType: 'Push', workoutKcal: 350, workoutMin: null, weightKg: 92.2 }, '2026-09-28', late);
     expect(w.activities).toEqual([{ date: '2026-09-28', linkId: 'checkin', steps: 8000, workouts: [{ type: 'Push', kcal: 350, linkId: 'checkin' }] }]);
     expect(w.weights).toEqual([{ date: '2026-09-28', kg: 92.2, time: '22:30' }]);
     expect(w.checkIns).toEqual(['2026-09-28']);
   });
 
   it('clears the check-in workout when "no workout" is chosen', () => {
-    expect(checkInWrites({ steps: null, workoutType: null, workoutKcal: null, weightKg: null }, '2026-09-28', late).activities[0].workouts).toEqual([]);
+    expect(checkInWrites({ steps: null, workoutType: null, workoutKcal: null, workoutMin: null, weightKg: null }, '2026-09-28', late).activities[0].workouts).toEqual([]);
   });
 
   it('leaves unchanged values alone so data saved elsewhere survives', () => {
-    const initial = { steps: 8000, workoutType: null, workoutKcal: null, weightKg: 92.2 };
+    const initial = { steps: 8000, workoutType: null, workoutKcal: null, workoutMin: null, weightKg: 92.2 };
     const w = checkInWrites({ ...initial }, '2026-09-28', late, initial);
     expect(w.activities).toEqual([{ date: '2026-09-28', linkId: 'checkin' }]);
     expect(w.weights).toEqual([]);
     expect(w.checkIns).toEqual(['2026-09-28']);
+  });
+
+  it('keeps the workout duration so the resting share can be taken out', () => {
+    const day = { date: '2026-09-28', manual: { workouts: [{ type: 'Legs', kcal: 520, durationMin: 60, linkId: 'checkin' }] } };
+    expect(initialCheckIn(day, undefined).workoutMin).toBe(60);
+    const w = checkInWrites({ steps: null, workoutType: 'Legs', workoutKcal: 520, workoutMin: 60, weightKg: null }, '2026-09-28', late);
+    expect(w.activities[0].workouts).toEqual([{ type: 'Legs', kcal: 520, durationMin: 60, linkId: 'checkin' }]);
+    expect(checkInError({ steps: null, workoutType: 'Legs', workoutKcal: 520, workoutMin: 0, weightKg: null })).toContain('משך');
+  });
+
+  it('rewrites the workout when only its duration changed', () => {
+    const initial = { steps: null, workoutType: 'Legs', workoutKcal: 520, workoutMin: null, weightKg: null };
+    const w = checkInWrites({ ...initial, workoutMin: 60 }, '2026-09-28', late, initial);
+    expect(w.activities[0].workouts).toEqual([{ type: 'Legs', kcal: 520, durationMin: 60, linkId: 'checkin' }]);
   });
 });

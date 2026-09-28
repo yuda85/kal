@@ -1,6 +1,6 @@
 import { bmr } from './bmr.ts';
 import { addDays, dateRange, daysBetween, weekStart } from './dates.ts';
-import { expenditure, kcalPerStep, type Expenditure } from './expenditure.ts';
+import { expenditure, type Expenditure } from './expenditure.ts';
 import { plannedWeight } from './plan.ts';
 import { settingsOf } from './settings.ts';
 import { KCAL_PER_KG, macroTargets } from './targets.ts';
@@ -85,6 +85,7 @@ export function summarizeDay(input: DayInput): DaySummary {
     heightCm: profile.heightCm,
     bmrKcal,
     defaultSteps: settings.defaultSteps,
+    baseFactor: settings.baseFactor,
   });
   const c = profile.constraints;
   const targetKcal = Math.min(
@@ -105,7 +106,7 @@ export function summarizeDay(input: DayInput): DaySummary {
     if (m.max !== null && m.value > m.max) warnings.push({ code: 'over_max', macro: key, value: m.value, limit: m.max });
   }
   // Judge the goal on a typical day (default steps, no workout), not on the partial day.
-  const typicalTarget = bmrKcal + kcalPerStep(trendKg, profile.heightCm) * settings.defaultSteps - goal.dailyDeficitKcal;
+  const typicalTarget = bmrKcal * settings.baseFactor - goal.dailyDeficitKcal;
   if (typicalTarget < 0.75 * bmrKcal) warnings.push({ code: 'below_bmr', value: typicalTarget, limit: bmrKcal });
   // A finished day without enough food counts as the missing-day penalty.
   const imputed =

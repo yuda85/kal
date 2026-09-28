@@ -1,10 +1,10 @@
 import {
   addDays,
+  DEFAULT_BASE_FACTOR,
   ageOn,
   bmr,
   dailyDeficit,
   isValidDate,
-  kcalPerStep,
   macroTargets,
   makeGoal,
   type Constraints,
@@ -121,7 +121,7 @@ export function previewSetup(f: SetupForm, today: string) {
   return {
     bmrKcal,
     deficitKcal,
-    typicalTargetKcal: bmrKcal + kcalPerStep(f.currentWeightKg, f.heightCm) * 3500 - deficitKcal,
+    typicalTargetKcal: bmrKcal * DEFAULT_BASE_FACTOR - deficitKcal,
     etaDate: addDays(today, days),
   };
 }
@@ -159,6 +159,7 @@ export function buildSetup(
       lowDayThresholdKcal: prevSettings?.lowDayThresholdKcal ?? 800,
       defaultSteps: prevSettings?.defaultSteps ?? 3500,
       missingDayKcal: prevSettings?.missingDayKcal ?? 3200,
+      ...(prevSettings?.baseFactor !== undefined ? { baseFactor: prevSettings.baseFactor } : {}),
     },
     activeGoalId: goal.id,
     ...(ctx.previousProfile?.garminLastSyncAt ? { garminLastSyncAt: ctx.previousProfile.garminLastSyncAt } : {}),

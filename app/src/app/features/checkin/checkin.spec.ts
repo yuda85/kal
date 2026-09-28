@@ -40,9 +40,12 @@ describe('CheckIn', () => {
     const kcal = el.querySelector<HTMLInputElement>('input[name=workoutKcal]')!;
     kcal.value = '350';
     kcal.dispatchEvent(new Event('input'));
+    const minutes = el.querySelector<HTMLInputElement>('input[name=workoutMin]')!;
+    minutes.value = '55';
+    minutes.dispatchEvent(new Event('input'));
     el.querySelector<HTMLButtonElement>('button.primary')!.click();
     await fixture.whenStable();
-    expect(repo.applied[0].writes.activities[0]).toMatchObject({ steps: 9000, workouts: [{ type: 'Push', kcal: 350 }] });
+    expect(repo.applied[0].writes.activities[0]).toMatchObject({ steps: 9000, workouts: [{ type: 'Push', kcal: 350, durationMin: 55 }] });
     expect(repo.applied[0].writes.checkIns).toEqual(['2026-09-27']);
     const service = TestBed.inject(CheckInService);
     expect(service.open()).toBe(false);

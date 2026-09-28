@@ -403,14 +403,15 @@ Calories from steps, workouts and deficit are an estimate; the weight trend is t
 
 ```
 steps      = manual.steps ?? garmin.steps ?? settings.defaultSteps (3500)
-out        = bmr + stepsKcal(steps) + Σ workout calories
-workout    = manual workouts: kcal as entered (the calories burned in that workout, as Garmin shows them; no BMR subtraction)
-             garmin workouts: max(0, kcal − bmr/1440 × durationMin) (unchanged, plan 3)
+out        = bmr × settings.baseFactor (1.2) + stepsKcal(steps − defaultSteps) + Σ workout calories
+workout    = max(0, kcal − bmr/1440 × durationMin)   manual and Garmin alike; without durationMin, kcal as entered
 ```
 
+Changed 2026-09-28 after the owner's review. BMR plus steps left out digestion and daily movement (about 15–20% of a day's burn) and put a rest-day target about 500 kcal below what the owner's history shows. BMR × 1.2 is the usual desk-day estimate and already includes the default 3,500 steps, so only steps above (or below) it change the day. A workout's total calories include its resting share, which BMR already counts: the owner enters Garmin's "active calories" without a duration, or the total with the duration. `baseFactor` is stored in settings so the owner can move it after 3–4 weeks of comparing the logged deficit with the weight deficit; there is no automatic correction.
+
 - `activityLevel` is no longer asked for or used (kept optional in stored profiles).
-- Manual workouts: `{ type, kcal, durationMin? }`, `type` from Upper, Lower, Push, Pull, Legs, Full body, Cardio, אחר.
-- The "target below BMR" warning fires when a typical day's target (`bmr + stepsKcal(defaultSteps) − deficit`) is below 75% of BMR.
+- Manual workouts: `{ type, kcal, durationMin? }`, `type` from Upper, Lower, Push, Pull, Legs, Full body, Cardio, אחר. The check-in sheet asks for calories and an optional duration.
+- The "target below BMR" warning fires when a typical day's target (`bmr × baseFactor − deficit`) is below 75% of BMR.
 
 ### Missing-day penalty
 

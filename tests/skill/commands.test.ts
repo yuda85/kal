@@ -10,7 +10,7 @@ describe('read commands', () => {
     const out = (await run(['day', '2026-09-27'], { reader: fakeReader(), now })) as any;
     expect(out.date).toBe('2026-09-27');
     expect(out.intake.kcal).toBe(320);
-    expect(out.remainingKcal).toBeCloseTo(2050.316 - 320, 2);
+    expect(out.remainingKcal).toBeCloseTo(2298.934 - 320, 2);
   });
 
   it('day: defaults to today in Israel', async () => {

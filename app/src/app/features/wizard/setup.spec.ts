@@ -49,6 +49,11 @@ describe('buildSetup', () => {
     expect(s.weighIn).toEqual({ date: '2026-09-27', kg: 90, time: '10:00' });
   });
 
+  it('keeps a base factor the owner tuned', () => {
+    const tuned = { ...testProfile, settings: { ...testProfile.settings, baseFactor: 1.3 } };
+    expect(buildSetup(form, { ...ctx, previousProfile: tuned }).profile.settings.baseFactor).toBe(1.3);
+  });
+
   it('survives a profile document without settings', () => {
     const bare = { ...testProfile, settings: undefined } as unknown as typeof testProfile;
     expect(buildSetup(form, { ...ctx, previousProfile: bare }).profile.settings.lowDayThresholdKcal).toBe(800);
@@ -89,7 +94,7 @@ describe('initialForm and previewSetup', () => {
     // BMR: 10·90 + 6.25·178 − 5·35 + 5 = 1842.5
     expect(p.bmrKcal).toBeCloseTo(1842.5, 6);
     expect(p.deficitKcal).toBeCloseTo(495, 6);
-    expect(p.typicalTargetKcal).toBeCloseTo(1842.5 + 3500 * 0.5 * 90 * (0.415 * 178) / 100 / 1000 - 495, 4);
+    expect(p.typicalTargetKcal).toBeCloseTo(1842.5 * 1.2 - 495, 6);
     // (90 − 80) / 0.45 kg per week × 7 = 155.6 → 156 days after 2026-09-27
     expect(p.etaDate).toBe('2027-03-02');
   });

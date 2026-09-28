@@ -48,9 +48,10 @@ describe('summarizeDay', () => {
 
   it('computes out, target and remaining', () => {
     expect(s.trendKg).toBe(85);
-    expect(s.expenditure.out).toBeCloseTo(2545.316, 2);
-    expect(s.targetKcal).toBeCloseTo(2050.316, 2);
-    expect(s.remainingKcal).toBeCloseTo(780.316, 2);
+    // 1792.5 × 1.2 + (9200 − 3500) steps × 0.03139475 + run 463.984
+    expect(s.expenditure.out).toBeCloseTo(2793.934, 2);
+    expect(s.targetKcal).toBeCloseTo(2298.934, 2);
+    expect(s.remainingKcal).toBeCloseTo(1028.934, 2);
   });
 
   it('caps the protein target at the constraint', () => {
@@ -69,7 +70,7 @@ describe('summarizeDay', () => {
     const w = summarizeDay({ date, entries: [], profile: testProfile, goal, weighIns });
     const warning = w.warnings.find((x) => x.code === 'below_bmr')!;
     expect(warning.limit).toBe(1792.5);
-    expect(warning.value).toBeCloseTo(1792.5 + 3500 * 0.03139475 - 1500, 2);
+    expect(warning.value).toBeCloseTo(1792.5 * 1.2 - 1500, 6);
   });
 
   it('does not warn below BMR on an active day when the goal itself is moderate', () => {
@@ -79,8 +80,8 @@ describe('summarizeDay', () => {
   });
 
   it('keeps the calorie target inside the kcal constraint', () => {
-    const withMin = { ...testProfile, constraints: { ...testProfile.constraints, kcal: { min: 2200 } } };
-    expect(summarizeDay({ date, entries, day, profile: withMin, goal: testGoal, weighIns }).targetKcal).toBe(2200);
+    const withMin = { ...testProfile, constraints: { ...testProfile.constraints, kcal: { min: 2400 } } };
+    expect(summarizeDay({ date, entries, day, profile: withMin, goal: testGoal, weighIns }).targetKcal).toBe(2400);
     const withMax = { ...testProfile, constraints: { ...testProfile.constraints, kcal: { max: 1800 } } };
     const capped = summarizeDay({ date, entries, day, profile: withMax, goal: testGoal, weighIns });
     expect(capped.targetKcal).toBe(1800);

@@ -16,7 +16,7 @@ describe('KalState', () => {
     const state = setup();
     expect(state.today()).toBe('2026-09-27');
     expect(state.goal()!.id).toBe('g1');
-    expect(state.todaySummary()!.remainingKcal).toBeCloseTo(2050.316 - 320, 2);
+    expect(state.todaySummary()!.remainingKcal).toBeCloseTo(2298.934 - 320, 2);
   });
 
   it('rolls today over after midnight in Israel', () => {

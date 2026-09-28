@@ -6,6 +6,8 @@ export interface CheckInDraft {
   steps: number | null;
   workoutType: string | null;
   workoutKcal: number | null;
+  /** Optional: with it, the workout's resting share (already in BMR) is taken out. */
+  workoutMin: number | null;
   weightKg: number | null;
 }
 
@@ -19,6 +21,7 @@ export function initialCheckIn(day: Day | undefined, weighIn: WeighIn | undefine
     steps: day?.manual?.steps ?? day?.garmin?.steps ?? null,
     workoutType: workout?.type ?? null,
     workoutKcal: workout?.kcal ?? null,
+    workoutMin: workout?.durationMin ?? null,
     weightKg: weighIn?.kg ?? null,
   };
 }
@@ -26,6 +29,7 @@ export function initialCheckIn(day: Day | undefined, weighIn: WeighIn | undefine
 export function checkInError(d: CheckInDraft): string | null {
   if (d.steps !== null && (d.steps < 0 || d.steps > 100000)) return 'צעדים: מספר בין 0 ל-100000';
   if (d.workoutType !== null && (d.workoutKcal === null || d.workoutKcal < 0 || d.workoutKcal > 3000)) return 'קלוריות אימון: מספר בין 0 ל-3000';
+  if (d.workoutType !== null && d.workoutMin !== null && (d.workoutMin < 1 || d.workoutMin > 600)) return 'משך אימון: בין 1 ל-600 דקות';
   if (d.weightKg !== null && (d.weightKg < 30 || d.weightKg > 300)) return 'משקל: מספר בין 30 ל-300';
   return null;
 }
@@ -33,7 +37,8 @@ export function checkInError(d: CheckInDraft): string | null {
 /** With `initial`, only what the owner changed is written, so values saved elsewhere meanwhile survive. */
 export function checkInWrites(d: CheckInDraft, date: string, now: Date, initial?: CheckInDraft): PlannedWrites {
   const stepsChanged = d.steps !== null && d.steps !== initial?.steps;
-  const workoutChanged = !initial || d.workoutType !== initial.workoutType || d.workoutKcal !== initial.workoutKcal;
+  const workoutChanged =
+    !initial || d.workoutType !== initial.workoutType || d.workoutKcal !== initial.workoutKcal || d.workoutMin !== initial.workoutMin;
   const weightChanged = d.weightKg !== null && d.weightKg !== initial?.weightKg;
   return {
     entries: [],
@@ -45,7 +50,7 @@ export function checkInWrites(d: CheckInDraft, date: string, now: Date, initial?
         linkId: CHECKIN_LINK_ID,
         ...(stepsChanged ? { steps: d.steps! } : {}),
         ...(workoutChanged
-          ? { workouts: d.workoutType !== null ? [{ type: d.workoutType, kcal: d.workoutKcal!, linkId: CHECKIN_LINK_ID }] : [] }
+          ? { workouts: d.workoutType !== null ? [{ type: d.workoutType, kcal: d.workoutKcal!, ...(d.workoutMin !== null ? { durationMin: d.workoutMin } : {}), linkId: CHECKIN_LINK_ID }] : [] }
           : {}),
       },
     ],
