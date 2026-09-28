@@ -23,7 +23,7 @@ import { breakdownText, staleSyncHours } from './today.logic';
       @if (staleHours(); as h) {
         <div class="alert warning row">
           <span>סנכרון Garmin אחרון לפני <span class="num">{{ h }}</span> שעות</span>
-          <button type="button" (click)="quickAdd.open('activity')">הזנה ידנית</button>
+          <button type="button" (click)="quickAdd.open('meal')">הזנה ידנית</button>
         </div>
       }
       @for (w of s.warnings; track $index) {

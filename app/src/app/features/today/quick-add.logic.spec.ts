@@ -1,4 +1,4 @@
-import { activityError, activityPayload, editedEntry, mealError, mealPayload, weightError, weightPayload } from './quick-add.logic';
+import { editedEntry, mealError, mealPayload, weightError, weightPayload } from './quick-add.logic';
 
 const now = new Date('2026-09-27T10:00:00Z');
 const meal = { name: '', kcal: 500, protein: null, carbs: null, fat: null };
@@ -31,27 +31,5 @@ describe('weight', () => {
     expect(weightError(20)).toContain('משקל');
     expect(weightError(null)).toContain('משקל');
     expect(weightPayload(88.4, now)).toEqual({ v: 1, ops: [{ op: 'weight', date: '2026-09-27', kg: 88.4 }] });
-  });
-});
-
-describe('activity', () => {
-  it('needs steps or a complete workout', () => {
-    expect(activityError({ steps: null, type: '', minutes: null, kcal: null })).toContain('צעדים');
-    expect(activityError({ steps: null, type: '', minutes: 30, kcal: 200 })).toContain('סוג');
-    expect(activityError({ steps: 9000, type: '', minutes: null, kcal: null })).toBeNull();
-  });
-
-  it('asks for the day steps when logging a workout on a day without steps', () => {
-    const run = { steps: null, type: 'ריצה', minutes: 30, kcal: 300 };
-    expect(activityError(run, false)).toContain('צעדים');
-    expect(activityError(run, true)).toBeNull();
-    expect(activityError({ ...run, steps: 8000 }, false)).toBeNull();
-  });
-
-  it('builds an activity op with an id', () => {
-    expect(activityPayload({ steps: 9000, type: 'כדורגל', minutes: 60, kcal: 550 }, now, 'act12345')).toEqual({
-      v: 1,
-      ops: [{ op: 'activity', id: 'act12345', date: '2026-09-27', steps: 9000, workouts: [{ type: 'כדורגל', durationMin: 60, kcal: 550 }] }],
-    });
   });
 });

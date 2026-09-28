@@ -5,7 +5,7 @@ import { KalRepository } from '../../core/repository';
 import { Toast } from '../../core/toast';
 import { localTime, newLinkId, planWrites, validatePayload, type Payload } from '../../domain';
 import { num } from '../../shared/format';
-import { activityError, activityPayload, editedEntry, mealError, mealPayload, weightError, weightPayload, type ActivityDraft, type MealDraft } from './quick-add.logic';
+import { editedEntry, mealError, mealPayload, weightError, weightPayload, type MealDraft } from './quick-add.logic';
 import { QuickAddService, type QuickAddTab } from './quick-add.service';
 
 @Component({
@@ -39,14 +39,6 @@ import { QuickAddService, type QuickAddTab } from './quick-add.service';
         }
         @case ('weight') {
           <label>משקל (ק״ג)<input name="kg" type="number" inputmode="decimal" [value]="kg() ?? ''" (input)="kg.set(num($any($event.target).value))" /></label>
-        }
-        @case ('activity') {
-          <label>סך הצעדים היום<input name="steps" type="number" inputmode="numeric" [value]="activity().steps ?? ''" (input)="patchActivity('steps', num($any($event.target).value))" /></label>
-          <label>סוג אימון<input name="type" maxlength="40" [value]="activity().type" (input)="patchActivity('type', $any($event.target).value)" /></label>
-          <div class="grid">
-            <label>דקות<input name="minutes" type="number" inputmode="numeric" [value]="activity().minutes ?? ''" (input)="patchActivity('minutes', num($any($event.target).value))" /></label>
-            <label>קלוריות<input name="workoutKcal" type="number" inputmode="decimal" [value]="activity().kcal ?? ''" (input)="patchActivity('kcal', num($any($event.target).value))" /></label>
-          </div>
         }
       }
 
@@ -82,7 +74,6 @@ export class QuickAdd {
   protected readonly tabs: { id: QuickAddTab; label: string }[] = [
     { id: 'meal', label: 'ארוחה' },
     { id: 'weight', label: 'משקל' },
-    { id: 'activity', label: 'פעילות' },
   ];
 
   private readonly editing = this.quickAdd.editing();
@@ -93,7 +84,6 @@ export class QuickAdd {
   );
   protected readonly showMacros = signal(this.editing !== null && this.editing.protein !== null);
   protected readonly kg = signal<number | null>(null);
-  protected readonly activity = signal<ActivityDraft>({ steps: null, type: '', minutes: null, kcal: null });
   protected readonly error = signal<string | null>(null);
 
   protected switchTab(tab: QuickAddTab): void {
@@ -103,10 +93,6 @@ export class QuickAdd {
 
   protected patchMeal<K extends keyof MealDraft>(key: K, value: MealDraft[K]): void {
     this.meal.update((m) => ({ ...m, [key]: value }));
-  }
-
-  protected patchActivity<K extends keyof ActivityDraft>(key: K, value: ActivityDraft[K]): void {
-    this.activity.update((a) => ({ ...a, [key]: value }));
   }
 
   protected save(): void {
@@ -125,14 +111,9 @@ export class QuickAdd {
         return;
       }
       if (!error) payload = mealPayload(this.meal(), now, newLinkId());
-    } else if (tab === 'weight') {
+    } else {
       error = weightError(this.kg());
       if (!error) payload = weightPayload(this.kg()!, now);
-    } else {
-      const day = this.state.days().find((d) => d.date === this.state.today());
-      const dayHasSteps = day?.manual?.steps !== undefined || day?.garmin?.steps !== undefined;
-      error = activityError(this.activity(), dayHasSteps);
-      if (!error) payload = activityPayload(this.activity(), now, newLinkId());
     }
     this.error.set(error);
     if (error || !payload) return;

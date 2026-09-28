@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import type { Entry } from '../../domain';
 
-export type QuickAddTab = 'meal' | 'weight' | 'activity';
+export type QuickAddTab = 'meal' | 'weight';
 
 @Injectable({ providedIn: 'root' })
 export class QuickAddService {

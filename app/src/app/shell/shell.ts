@@ -2,12 +2,14 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LucideCalendarDays, LucideChefHat, LucideHouse, LucideScale, LucideSettings } from '@lucide/angular';
 import { Toast } from '../core/toast';
+import { CheckIn } from '../features/checkin/checkin';
+import { CheckInService } from '../features/checkin/checkin.service';
 import { QuickAdd } from '../features/today/quick-add';
 import { QuickAddService } from '../features/today/quick-add.service';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideHouse, LucideCalendarDays, LucideScale, LucideChefHat, LucideSettings, QuickAdd],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideHouse, LucideCalendarDays, LucideScale, LucideChefHat, LucideSettings, QuickAdd, CheckIn],
   template: `
     <header class="top row">
       <strong>kal</strong>
@@ -19,6 +21,9 @@ import { QuickAddService } from '../features/today/quick-add.service';
     }
     @if (quickAdd.tab()) {
       <app-quick-add />
+    }
+    @if (checkin.open()) {
+      <app-checkin />
     }
     <nav class="tabs" aria-label="ניווט">
       <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }"><svg lucideHouse [size]="20"></svg>היום</a>
@@ -48,4 +53,5 @@ import { QuickAddService } from '../features/today/quick-add.service';
 export class Shell {
   protected readonly toast = inject(Toast);
   protected readonly quickAdd = inject(QuickAddService);
+  protected readonly checkin = inject(CheckInService);
 }

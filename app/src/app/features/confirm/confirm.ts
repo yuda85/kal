@@ -8,6 +8,7 @@ import { Toast } from '../../core/toast';
 import { decodePayload, localTime, mergeManual, planWrites, recipesInPayload, rescaleAdd, validatePayload, type AddOp, type Day, type Op } from '../../domain';
 import { BulletBar } from '../../shared/bullet-bar';
 import { fmt, num, shortDate, warningText } from '../../shared/format';
+import { CheckInService } from '../checkin/checkin.service';
 import { describeOp } from './confirm.logic';
 
 @Component({
@@ -84,6 +85,7 @@ export class Confirm {
   private readonly repo = inject(KalRepository);
   private readonly router = inject(Router);
   private readonly toast = inject(Toast);
+  private readonly checkin = inject(CheckInService);
   protected readonly fmt = fmt;
   protected readonly shortDate = shortDate;
   protected readonly warningText = warningText;
@@ -170,6 +172,8 @@ export class Confirm {
       return;
     }
     const writes = planWrites(payload, { source: 'link', time: localTime(this.state.now()) });
+    const today = this.state.today();
+    if (writes.checkIns.includes(today)) this.checkin.dismiss(today);
     this.repo.applyWrites(uid, writes, this.state.days()).catch(() => this.toast.show('השמירה נכשלה'));
     this.intake.clear();
     this.toast.show('נשמר');

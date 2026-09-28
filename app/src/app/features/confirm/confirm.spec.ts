@@ -6,6 +6,7 @@ import { LinkIntake } from '../../core/link-intake';
 import { KalRepository } from '../../core/repository';
 import { Toast } from '../../core/toast';
 import { encodePayload, type Op } from '../../domain';
+import { CheckInService } from '../checkin/checkin.service';
 import { Confirm } from './confirm';
 
 async function open(ops: Op[] | string, repo: FakeRepository = seededRepository()) {
@@ -101,5 +102,12 @@ describe('Confirm', () => {
     expect(repo.applied[0].writes.weights).toHaveLength(1);
     expect(TestBed.inject(LinkIntake).pending()).toBeNull();
     expect(TestBed.inject(Toast).message()).toBe('נשמר');
+  });
+
+  it('does not reopen the check-in after a check-in link for today is saved', async () => {
+    const { fixture, el } = await open([{ op: 'activity', id: 'checkin', date: '2026-09-27', steps: 9000 }]);
+    el.querySelector<HTMLButtonElement>('button.primary')!.click();
+    await fixture.whenStable();
+    expect(TestBed.inject(CheckInService).dismissedFor()).toBe('2026-09-27');
   });
 });
