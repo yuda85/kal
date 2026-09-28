@@ -23,7 +23,8 @@ describe('read commands', () => {
     expect(out.start).toBe('2026-09-27');
     expect(out.daysLogged).toBe(0);
     expect(out.missingDays).toEqual([]);
-    expect(out.days[0]).toEqual({ date: '2026-09-27', inKcal: 320, outKcal: expect.any(Number), protein: 20, entries: 1 });
+    expect(out.days[0]).toEqual({ date: '2026-09-27', inKcal: 320, countedKcal: 320, imputed: false, outKcal: expect.any(Number), protein: 20, entries: 1, workouts: ['running'] });
+    expect(out.workoutsCount).toBe(1);
   });
 
   it('profile: returns trend, targets and plan status', async () => {
@@ -31,7 +32,8 @@ describe('read commands', () => {
     expect(out.trendKg).toBe(85);
     expect(out.bmrKcal).toBeCloseTo(1792.5, 6);
     expect(out.macroTargets.protein).toBe(120);
-    expect(out.status).toBe('ahead');
+    expect(out).not.toHaveProperty('status');
+    expect(out.reality.status).toBe('no_data');
     expect(out.eta).toBeNull();
     expect(out.reportGap).toBeNull();
   });
@@ -49,6 +51,21 @@ describe('read commands', () => {
     const reader = fakeReader({ goals: [{ id: 'g1', data: { ...goalData, startDate: '2026-09-29' } }] });
     const out = (await run(['week', '2026-09-27'], { reader, now: new Date('2026-10-01T10:00:00Z') })) as any;
     expect(out.missingDays).toEqual(['2026-09-29', '2026-09-30']);
+  });
+
+  it('month: summarizes the month with workouts and penalized days', async () => {
+    const out = (await run(['month', '2026-09'], { reader: fakeReader(), now: new Date('2026-09-28T10:00:00Z') })) as any;
+    expect(out.month).toBe('2026-09');
+    expect(out.workoutsCount).toBe(1);
+    // 09-01..09-27 are finished; only 09-20 (999 kcal) is logged, 09-27 (320 kcal) is penalized
+    expect(out.daysLogged).toBe(1);
+    expect(out.imputedDays).toBe(26);
+    expect(out.days.find((d: any) => d.date === '2026-09-27')).toMatchObject({ inKcal: 320, countedKcal: 3200, imputed: true, workouts: ['running'] });
+    expect(out.days.find((d: any) => d.date === '2026-09-20').imputed).toBe(false);
+  });
+
+  it('rejects an invalid month', async () => {
+    await expect(run(['month', '2026-13'], { reader: fakeReader(), now })).rejects.toThrow('invalid month');
   });
 
   it('rejects unknown commands and invalid dates', async () => {

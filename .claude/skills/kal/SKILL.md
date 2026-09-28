@@ -12,9 +12,10 @@ Reply in the user's language (usually Hebrew). Keep replies short.
 ## Commands
 
 ```bash
-node .claude/skills/kal/scripts/read.ts profile        # goal, trend, BMR, macro targets, plan status, ETA, report gap
+node .claude/skills/kal/scripts/read.ts profile        # goal, trend, BMR, macro targets, weight reality, ETA, report gap
 node .claude/skills/kal/scripts/read.ts day [date]     # intake, out breakdown, target, remaining, macros, warnings
 node .claude/skills/kal/scripts/read.ts week [date]    # the Sun–Sat week containing date: averages, missing days
+node .claude/skills/kal/scripts/read.ts month [YYYY-MM] # workouts, penalized days, logged vs weight deficit
 node .claude/skills/kal/scripts/read.ts recipes        # saved recipes with per-unit / per-100 g values
 ```
 
@@ -56,25 +57,32 @@ Collect ingredients with raw grams and the yield: number of units (with a unit n
 
 ```json
 {"op":"weight","kg":88.4}
-{"op":"activity","steps":9200}
-{"op":"activity","workouts":[{"type":"football","durationMin":60,"kcal":550}]}
+{"op":"activity","id":"checkin","steps":9200,"workouts":[{"type":"Push","kcal":350}]}
 ```
 
-Use `activity` only when Garmin missed something or its sync is broken. Manual steps replace Garmin steps for that day; manual workouts are added to Garmin workouts.
-
-A workout alone switches a day from the activity-level estimate to "BMR + steps + workouts". If `read.ts day` shows `expenditure.steps` 0 (no Garmin data), ask for today's total steps and send them in the same op: `{"op":"activity","steps":8500,"workouts":[...]}`.
+- A day summary uses `"id":"checkin"` and marks the day checked in. `steps` replaces the day's steps; `workouts` replaces the day's check-in workouts (`[]` removes them); an op without `workouts` keeps them. `kcal` is the calories burned in the workout as the owner reads them in Garmin; no duration needed. Types: Upper, Lower, Push, Pull, Legs, Full body, Cardio, אחר.
+- A day without steps counts as 3,500 steps. A finished day with less than 800 kcal of food counts as 3,200 (the owner's penalty rule); logging real food removes it.
 
 ## Questions (no link)
 
 Answer from `read.ts` output. Round kcal and grams to whole numbers.
 
 - "כמה נשאר היום?" → `day` → `remainingKcal`, protein vs target.
-- "איך השבוע?" → `week` → `avgDeficitKcal` vs `targetDeficitKcal`, `daysLogged`, `missingDays`, `trendChangeKg` vs `plannedChangeKg`.
-- "מתי אגיע ליעד?" → `profile` → `eta`, `status`; mention `reportGap.alert` if true.
+- "איך השבוע?" → `profile` and `week` → lead with `profile.reality`; then `avgDeficitKcal` next to `weightDeficitKcal`, `trendChangeKg` vs `plannedChangeKg`, `workoutsCount`, `imputedDays`.
+- "איך החודש?" → `profile` and `month` → lead with `profile.reality`; then `workoutsCount`, `workoutsPerWeek`, `imputedDays`, `avgDeficitKcal` next to `weightDeficitKcal`.
+- "מתי אגיע ליעד?" → `profile` → `eta` and `reality.status`; mention `reportGap.alert` if true.
+
+## Progress answers: the scale is the judge
+
+Never say or imply "on track" because of steps, workouts or a logged deficit. Lead every progress answer with `profile.reality`:
+- `no_data` → say there are not enough weigh-ins to know, and ask for a weigh-in.
+- `gaining` / `stalled` → say so plainly, with `trendChangeKg` vs `plannedChangeKg`.
+- `on_track` → only then say on track.
+Always put the logged deficit next to the weight deficit (`reality.loggedDeficitKcal` / `reality.weightDeficitKcal` from `profile`; `avgDeficitKcal` / `weightDeficitKcal` from `week` and `month`), and mention penalized days (`imputedDays`) in weekly and monthly answers.
 
 ## Limits (`link.ts` rejects values outside these)
 
-Entry kcal 0–5000 · macros 0–500 g · weight 30–300 kg · steps 0–100000 · workout 1–600 min and 0–3000 kcal · per-100 g kcal 0–900 and macros 0–100 g.
+Entry kcal 0–5000 · macros 0–500 g · weight 30–300 kg · steps 0–100000 · workout 0–3000 kcal (duration optional, 1–600 min) · per-100 g kcal 0–900 and macros 0–100 g.
 
 ## Errors
 
