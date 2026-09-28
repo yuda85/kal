@@ -41,7 +41,7 @@ import { QuickAddService, type QuickAddTab } from './quick-add.service';
           <label>משקל (ק״ג)<input name="kg" type="number" inputmode="decimal" [value]="kg() ?? ''" (input)="kg.set(num($any($event.target).value))" /></label>
         }
         @case ('activity') {
-          <label>צעדים<input name="steps" type="number" inputmode="numeric" [value]="activity().steps ?? ''" (input)="patchActivity('steps', num($any($event.target).value))" /></label>
+          <label>סך הצעדים היום<input name="steps" type="number" inputmode="numeric" [value]="activity().steps ?? ''" (input)="patchActivity('steps', num($any($event.target).value))" /></label>
           <label>סוג אימון<input name="type" maxlength="40" [value]="activity().type" (input)="patchActivity('type', $any($event.target).value)" /></label>
           <div class="grid">
             <label>דקות<input name="minutes" type="number" inputmode="numeric" [value]="activity().minutes ?? ''" (input)="patchActivity('minutes', num($any($event.target).value))" /></label>
@@ -112,6 +112,7 @@ export class QuickAdd {
   protected save(): void {
     const uid = this.state.uid();
     if (!uid) return;
+    this.state.refreshNow();
     const now = this.state.now();
     const tab = this.quickAdd.tab();
     const editing = this.quickAdd.editing();
@@ -128,7 +129,9 @@ export class QuickAdd {
       error = weightError(this.kg());
       if (!error) payload = weightPayload(this.kg()!, now);
     } else {
-      error = activityError(this.activity());
+      const day = this.state.days().find((d) => d.date === this.state.today());
+      const dayHasSteps = day?.manual?.steps !== undefined || day?.garmin?.steps !== undefined;
+      error = activityError(this.activity(), dayHasSteps);
       if (!error) payload = activityPayload(this.activity(), now, newLinkId());
     }
     this.error.set(error);

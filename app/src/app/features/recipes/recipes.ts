@@ -14,13 +14,13 @@ import { recipeRow } from './recipes.logic';
         <li class="card">
           <button type="button" class="head" (click)="toggle(r.row.id)" [attr.aria-expanded]="open() === r.row.id">
             <span><strong>{{ r.row.name }}</strong>@if (r.row.aliases) { <span class="muted small"> · {{ r.row.aliases }}</span> }</span>
-            <span class="num">{{ r.row.perLabel }}</span>
+            <span>{{ r.row.perLabel }}</span>
           </button>
           <div class="muted small num">{{ r.row.macros }}</div>
           @if (open() === r.row.id) {
             <ul class="ingredients small">
               @for (i of r.recipe.ingredients; track $index) {
-                <li class="row"><span>{{ i.name }}</span><span class="num">{{ fmt(i.grams) }} ג׳</span></li>
+                <li class="row"><span>{{ i.name }}</span><span><span class="num">{{ fmt(i.grams) }}</span> ג׳</span></li>
               }
             </ul>
             <button type="button" class="danger" (click)="remove(r.row.id, r.row.name)">מחיקה</button>

@@ -41,6 +41,13 @@ describe('activity', () => {
     expect(activityError({ steps: 9000, type: '', minutes: null, kcal: null })).toBeNull();
   });
 
+  it('asks for the day steps when logging a workout on a day without steps', () => {
+    const run = { steps: null, type: 'ריצה', minutes: 30, kcal: 300 };
+    expect(activityError(run, false)).toContain('צעדים');
+    expect(activityError(run, true)).toBeNull();
+    expect(activityError({ ...run, steps: 8000 }, false)).toBeNull();
+  });
+
   it('builds an activity op with an id', () => {
     expect(activityPayload({ steps: 9000, type: 'כדורגל', minutes: 60, kcal: 550 }, now, 'act12345')).toEqual({
       v: 1,

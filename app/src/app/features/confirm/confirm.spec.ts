@@ -73,6 +73,18 @@ describe('Confirm', () => {
     expect(el.querySelectorAll('.preview app-bullet-bar')).toHaveLength(4);
   });
 
+  it('includes a logged activity in the after-save preview', async () => {
+    const { fixture } = await open([{ op: 'activity', id: 'act12345', date: '2026-09-27', workouts: [{ type: 'הליכה', durationMin: 60, kcal: 300 }] }]);
+    const preview = (fixture.componentInstance as unknown as { preview(): { date: string; targetKcal: number } }).preview();
+    // base target 2050.3 + walk net (300 − 1792.5/1440·60 = 225.3)
+    expect(preview.targetKcal).toBeCloseTo(2275.6, 0);
+  });
+
+  it('previews the day of a weight-only link', async () => {
+    const { fixture } = await open([{ op: 'weight', date: '2026-09-26', kg: 84 }]);
+    expect((fixture.componentInstance as unknown as { preview(): { date: string } }).preview().date).toBe('2026-09-26');
+  });
+
   it('warns when protein would pass the cap', async () => {
     const { el } = await open([{ ...shakshuka, protein: 111 } as Op]);
     expect(el.textContent).toContain('מעל התקרה');

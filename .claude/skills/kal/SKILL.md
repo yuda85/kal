@@ -62,6 +62,8 @@ Collect ingredients with raw grams and the yield: number of units (with a unit n
 
 Use `activity` only when Garmin missed something or its sync is broken. Manual steps replace Garmin steps for that day; manual workouts are added to Garmin workouts.
 
+A workout alone switches a day from the activity-level estimate to "BMR + steps + workouts". If `read.ts day` shows `expenditure.steps` 0 (no Garmin data), ask for today's total steps and send them in the same op: `{"op":"activity","steps":8500,"workouts":[...]}`.
+
 ## Questions (no link)
 
 Answer from `read.ts` output. Round kcal and grams to whole numbers.

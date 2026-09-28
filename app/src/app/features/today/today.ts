@@ -60,6 +60,7 @@ import { breakdownText, staleSyncHours } from './today.logic';
     }
   `,
   styles: `
+    :host { display: block; padding-block-end: 72px; } /* keep the last entry clear of the FAB */
     .hero { text-align: center; padding: 16px 0 8px; }
     .big { font-size: 34px; font-weight: 500; color: var(--out); }
     .big.over { color: var(--danger); }

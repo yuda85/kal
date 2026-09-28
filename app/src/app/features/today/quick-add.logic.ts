@@ -65,13 +65,15 @@ function hasWorkout(d: ActivityDraft): boolean {
   return d.type.trim() !== '' || d.minutes !== null || d.kcal !== null;
 }
 
-export function activityError(d: ActivityDraft): string | null {
+export function activityError(d: ActivityDraft, dayHasSteps = true): string | null {
   if (d.steps === null && !hasWorkout(d)) return 'הזן צעדים או אימון';
   if (d.steps !== null && (d.steps < 0 || d.steps > 100000)) return 'צעדים: מספר בין 0 ל-100000';
   if (hasWorkout(d)) {
     if (d.type.trim() === '') return 'סוג האימון חסר';
     if (d.minutes === null || d.minutes < 1 || d.minutes > 600) return 'משך: בין 1 ל-600 דקות';
     if (d.kcal === null || d.kcal < 0 || d.kcal > 3000) return 'קלוריות אימון: בין 0 ל-3000';
+    // A workout alone would switch the day from the activity-level estimate to BMR + workout only.
+    if (d.steps === null && !dayHasSteps) return 'הזן גם את סך הצעדים של היום (אין עדיין צעדים ליום הזה)';
   }
   return null;
 }

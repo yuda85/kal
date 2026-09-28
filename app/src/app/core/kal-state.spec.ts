@@ -26,6 +26,15 @@ describe('KalState', () => {
     expect(state.todaySummary()!.entries).toEqual([]);
   });
 
+  it('refreshes the clock when the app returns to the foreground', () => {
+    const state = setup();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-28T04:30:00Z'));
+    document.dispatchEvent(new Event('visibilitychange'));
+    vi.useRealTimers();
+    expect(state.today()).toBe('2026-09-28');
+  });
+
   it('resolves whenLoaded once profile and goals arrived', async () => {
     const state = setup();
     await expect(state.whenLoaded()).resolves.toBeUndefined();

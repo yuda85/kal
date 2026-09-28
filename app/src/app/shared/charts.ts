@@ -26,6 +26,12 @@ function token(name: string, fallback: string): string {
   return value || fallback;
 }
 
+function themeDefaults(): void {
+  // Canvas text does not inherit CSS; take the theme's colors so charts stay readable in dark mode.
+  Chart.defaults.color = token('--fg-muted', '#475569');
+  Chart.defaults.borderColor = token('--border', '#E2E8F0');
+}
+
 export async function fontsReady(): Promise<void> {
   if (!('fonts' in document)) return;
   // Sample text with Hebrew and digits, so the Hebrew and Latin subsets both load before drawing.
@@ -60,6 +66,7 @@ export function weekChart(
   kcalOut: (number | null)[],
   missing: readonly number[],
 ): Chart<'bar'> {
+  themeDefaults();
   const config: ChartConfiguration<'bar', (number | null)[], string> = {
     type: 'bar',
     data: {
@@ -89,6 +96,7 @@ export function weightChart(
   target: (number | null)[],
   weighIns: (number | null)[],
 ): Chart<'line'> {
+  themeDefaults();
   const muted = token('--neutral-bar', '#888780');
   const config: ChartConfiguration<'line', (number | null)[], string> = {
     type: 'line',

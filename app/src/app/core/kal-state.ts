@@ -10,6 +10,10 @@ export class KalState {
   private unsubscribers: Unsubscribe[] = [];
   private timer: ReturnType<typeof setInterval> | undefined;
   private loaded: Promise<void> = Promise.resolve();
+  // Timers are suspended while a phone app sits in the background; refresh the clock on return.
+  private readonly onForeground = () => {
+    if (document.visibilityState === 'visible') this.refreshNow();
+  };
 
   readonly uid = signal<string | null>(null);
   readonly profile = signal<Profile | null>(null);
@@ -60,13 +64,21 @@ export class KalState {
       this.repo.watchWeighIns(uid, (w) => this.weighIns.set(w)),
       this.repo.watchRecipes(uid, (r) => this.recipes.set(r)),
     ];
-    this.timer = setInterval(() => this.now.set(new Date()), 60_000);
+    this.timer = setInterval(() => this.refreshNow(), 60_000);
+    document.addEventListener('visibilitychange', this.onForeground);
+    addEventListener('pageshow', this.onForeground);
+  }
+
+  refreshNow(): void {
+    this.now.set(new Date());
   }
 
   stop(): void {
     this.unsubscribers.forEach((u) => u());
     this.unsubscribers = [];
     clearInterval(this.timer);
+    document.removeEventListener('visibilitychange', this.onForeground);
+    removeEventListener('pageshow', this.onForeground);
     this.uid.set(null);
     this.profile.set(null);
     this.goals.set([]);
@@ -80,14 +92,14 @@ export class KalState {
     return this.loaded;
   }
 
-  dayFor(date: string, overrides: { entries?: Entry[]; weighIns?: WeighIn[] } = {}): DaySummary | null {
+  dayFor(date: string, overrides: { entries?: Entry[]; weighIns?: WeighIn[]; days?: Day[] } = {}): DaySummary | null {
     const profile = this.profile();
     const goal = this.goal();
     if (!profile || !goal) return null;
     return summarizeDay({
       date,
       entries: overrides.entries ?? this.entries(),
-      day: this.days().find((d) => d.date === date),
+      day: (overrides.days ?? this.days()).find((d) => d.date === date),
       profile,
       goal,
       weighIns: overrides.weighIns ?? this.weighIns(),

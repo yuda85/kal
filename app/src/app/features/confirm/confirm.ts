@@ -5,7 +5,7 @@ import { KalState } from '../../core/kal-state';
 import { LinkIntake } from '../../core/link-intake';
 import { KalRepository } from '../../core/repository';
 import { Toast } from '../../core/toast';
-import { decodePayload, localTime, planWrites, recipesInPayload, rescaleAdd, validatePayload, type AddOp, type Op } from '../../domain';
+import { decodePayload, localTime, mergeManual, planWrites, recipesInPayload, rescaleAdd, validatePayload, type AddOp, type Day, type Op } from '../../domain';
 import { BulletBar } from '../../shared/bullet-bar';
 import { fmt, num, shortDate, warningText } from '../../shared/format';
 import { describeOp } from './confirm.logic';
@@ -113,11 +113,16 @@ export class Confirm {
     const ops = this.ops();
     if (ops.length === 0) return null;
     const writes = planWrites({ v: 1, ops }, { source: 'link', time: localTime(this.state.now()) });
-    const date = writes.entries[0]?.date ?? this.state.today();
+    const date = writes.entries[0]?.date ?? writes.activities[0]?.date ?? writes.weights[0]?.date ?? this.state.today();
     const ids = new Set(writes.entries.map((e) => e.id));
     const entries = [...this.state.entries().filter((e) => !ids.has(e.id)), ...writes.entries];
     const weighIns = [...this.state.weighIns().filter((w) => !writes.weights.some((x) => x.date === w.date)), ...writes.weights];
-    return this.state.dayFor(date, { entries, weighIns });
+    const days = new Map<string, Day>(this.state.days().map((d) => [d.date, d]));
+    for (const a of writes.activities) {
+      const day = days.get(a.date) ?? { date: a.date };
+      days.set(a.date, { ...day, manual: mergeManual(day.manual, a) });
+    }
+    return this.state.dayFor(date, { entries, weighIns, days: [...days.values()] });
   });
 
   protected describe(op: Op): string {
