@@ -385,3 +385,57 @@ Claude does not create cloud resources or sign in on the owner's behalf. Step-by
 | Cloud session network blocks Firestore or Pages | Allow domains in environment settings |
 | Claude's nutrition estimates are wrong | Confirm screen shows and allows editing numbers; Claude states assumptions |
 | Public read exposes all data | Accepted by owner |
+
+## 14. Daily check-in, missing-day penalty, weight reality check (added 2026-09-28)
+
+Garmin sync (§7) is postponed. Until it exists, the owner closes each day by hand. This section overrides §6 and §9 where they conflict.
+
+### Principle: the scale is the judge
+
+Calories from steps, workouts and deficit are an estimate; the weight trend is the truth. The app must never suggest the owner is on track because of logged steps or workouts when the weight does not confirm it:
+
+- Every "on track" status is derived from the weight trend only. With too few weigh-ins the status is "not enough weigh-ins", never green.
+- Wherever a logged deficit is shown, the deficit implied by the weight trend is shown next to it.
+- "Remaining to eat" is a neutral number, not a success color.
+- No automatic budget correction (calibration stays out of scope, §2); the app shows the truth and the owner decides.
+
+### Expenditure model (replaces the activity-level fallback)
+
+```
+steps      = manual.steps ?? garmin.steps ?? settings.defaultSteps (3500)
+out        = bmr + stepsKcal(steps) + Σ workout calories
+workout    = manual workouts: kcal as entered (the calories burned in that workout, as Garmin shows them; no BMR subtraction)
+             garmin workouts: max(0, kcal − bmr/1440 × durationMin) (unchanged, plan 3)
+```
+
+- `activityLevel` is no longer asked for or used (kept optional in stored profiles).
+- Manual workouts: `{ type, kcal, durationMin? }`, `type` from Upper, Lower, Push, Pull, Legs, Full body, Cardio, אחר.
+- The "target below BMR" warning judges a typical day: `bmr + stepsKcal(defaultSteps) − deficit < bmr`.
+
+### Missing-day penalty
+
+- A day that has ended (date < today), on or after the goal start, with logged food below `lowDayThresholdKcal` (800) counts as `settings.missingDayKcal` (3200) calories in, and is marked "not logged, counted as 3,200".
+- The penalty is computed, never written. Logging real food for that day removes it.
+- It applies to every calculation: week and month averages, the reality check and the report-gap check.
+
+### Daily check-in
+
+- Opening the app from 22:00 (Asia/Jerusalem) shows a "close the day" sheet until that day is checked in. "Not now" closes it until the next app open. A button on Today opens it any time.
+- Fields: steps; workout (none or a type) and its calories; optional weigh-in; a food status line ("X kcal logged" or "nothing logged, the day will count as 3,200").
+- Saving writes `days/{date}.manual.steps`, the check-in workout (tagged `linkId: "checkin"`, so saving again replaces it) and `checkedInAt`. It can be edited any time.
+- Claude can do the same through an `activity` link op.
+
+### UI
+
+- Today: a weigh-in chip at the top ("+ weigh-in today" when missing); a reality line under the budget; a waterfall "how today's target is built" (BMR, steps with a mark when defaulted, each workout, minus deficit, equals target); a "close the day" button.
+- Week tab gets a Week | Month switch.
+  - Week: workouts count and the type per day, penalized days marked, logged deficit next to the weight deficit, the report-gap alert.
+  - Month: a calendar grid, each day showing its workout type, a background for deficit / surplus / not logged, and totals (workouts, workouts per week, days not logged, logged vs weight deficit).
+- The wizard loses the activity step.
+
+### Reality check (domain)
+
+- Window: the last 14 days.
+- Status by weight trend only: `no_data` if fewer than 4 weigh-ins in the window; `gaining` if the trend rose more than 0.1 kg; `stalled` if it fell less than half the planned amount; otherwise `on_track`.
+- Logged deficit per day = mean(out − counted intake); weight deficit per day = −(trend change) × 7700 / days.
+- The alert "the log shows a deficit the scale does not confirm" uses the existing report-gap rule (gap > 300 kcal/day, from goal day 21).
