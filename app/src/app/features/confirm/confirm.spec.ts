@@ -76,8 +76,8 @@ describe('Confirm', () => {
   it('includes a logged activity in the after-save preview', async () => {
     const { fixture } = await open([{ op: 'activity', id: 'act12345', date: '2026-09-27', workouts: [{ type: 'הליכה', durationMin: 60, kcal: 300 }] }]);
     const preview = (fixture.componentInstance as unknown as { preview(): { date: string; targetKcal: number } }).preview();
-    // base target 2050.3 + walk net (300 − 1792.5/1440·60 = 225.3)
-    expect(preview.targetKcal).toBeCloseTo(2275.6, 0);
+    // base target 2050.3 + walk 300 kcal, counted as entered
+    expect(preview.targetKcal).toBeCloseTo(2350.3, 0);
   });
 
   it('previews the day of a weight-only link', async () => {

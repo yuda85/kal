@@ -1,11 +1,12 @@
 import { Component, computed, DestroyRef, effect, inject, viewChild, type ElementRef } from '@angular/core';
 import type { Chart } from 'chart.js';
 import { KalState } from '../../core/kal-state';
-import { addDays, dateRange, GAP_WINDOW_DAYS } from '../../domain';
+import { dateRange } from '../../domain';
 import { fontsReady, weightChart } from '../../shared/charts';
 import { fmt, shortDate } from '../../shared/format';
 import { QuickAddService } from '../today/quick-add.service';
-import { STATUS_TEXT, weightView, type WeightView } from './weight.logic';
+import { realityLine } from '../../shared/reality-line';
+import { weightView, type WeightView } from './weight.logic';
 
 @Component({
   selector: 'app-weight',
@@ -16,11 +17,9 @@ import { STATUS_TEXT, weightView, type WeightView } from './weight.logic';
           <div class="num big">{{ v.trendKg === null ? '—' : fmt(v.trendKg, 1) + ' kg' }}</div>
           <div class="muted small">מגמה · יעד <span class="num">{{ fmt(goalKg(), 1) }}</span></div>
         </div>
-        @if (v.status; as s) {
-          <span class="alert" [class.success]="s !== 'behind'" [class.warning]="s === 'behind'">
-            {{ statusText[s] }}@if (v.eta) { · צפי <span class="num">{{ shortDate(v.eta) }}</span> }
-          </span>
-        }
+        <span class="alert" [class]="reality().tone">
+          {{ reality().text }}@if (v.eta && reality().tone !== 'neutral') { · צפי <span class="num">{{ shortDate(v.eta) }}</span> }
+        </span>
       </section>
 
       <div class="chart"><canvas #chart aria-label="מגמת משקל מול תוכנית ויעד"></canvas></div>
@@ -56,7 +55,7 @@ export class WeightPage {
   protected readonly quickAdd = inject(QuickAddService);
   protected readonly fmt = fmt;
   protected readonly shortDate = shortDate;
-  protected readonly statusText = STATUS_TEXT;
+  protected readonly reality = computed(() => realityLine(this.state.reality()));
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('chart');
   private chart: Chart | undefined;
   private drawToken = 0;
@@ -67,12 +66,13 @@ export class WeightPage {
     const profile = this.state.profile();
     const goal = this.state.goal();
     if (!profile || !goal) return null;
-    const today = this.state.today();
-    const energy = dateRange(addDays(today, -GAP_WINDOW_DAYS), addDays(today, -1)).map((date) => {
-      const s = this.state.dayFor(date)!;
-      return { date, inKcal: s.intake.kcal, outKcal: s.expenditure.out };
+    return weightView({
+      today: this.state.today(),
+      goal,
+      weighIns: this.state.weighIns(),
+      energy: this.state.recentEnergy(),
+      lowDayThresholdKcal: profile.settings.lowDayThresholdKcal,
     });
-    return weightView({ today, goal, weighIns: this.state.weighIns(), energy, lowDayThresholdKcal: profile.settings.lowDayThresholdKcal });
   });
 
   constructor() {

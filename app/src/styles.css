@@ -73,6 +73,7 @@ label { display: grid; gap: 4px; font-size: 13px; color: var(--fg-muted); }
 .alert.warning { background: var(--warning-bg); color: var(--warning-fg); }
 .alert.danger { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
 .alert.success { background: var(--success-bg); color: var(--success-fg); }
+.alert.neutral { background: var(--card); color: var(--fg-muted); border: 1px solid var(--border); }
 .error { color: var(--danger); font-size: 13px; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .stack { display: grid; gap: 12px; }

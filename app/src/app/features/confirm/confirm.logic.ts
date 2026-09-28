@@ -13,7 +13,7 @@ export function describeOp(op: Op, recipes: Recipe[]): string {
     case 'activity': {
       const parts: string[] = [];
       if (op.steps !== undefined) parts.push(`${fmt(op.steps)} צעדים`);
-      for (const w of op.workouts ?? []) parts.push(`${w.type} ${fmt(w.durationMin)} דק׳ ${fmt(w.kcal)} קל׳`);
+      for (const w of op.workouts ?? []) parts.push(`${w.type} ${fmt(w.kcal)} קל׳${w.durationMin ? ` (${fmt(w.durationMin)} דק׳)` : ''}`);
       return `פעילות (${shortDate(op.date)}): ${parts.join(' · ')}`;
     }
     case 'add': {

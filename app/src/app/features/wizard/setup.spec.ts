@@ -7,7 +7,6 @@ const form: SetupForm = {
   heightCm: 178,
   currentWeightKg: 90,
   bodyFatPct: null,
-  activityLevel: 'moderate',
   targetWeightKg: 80,
   preset: 'relaxed',
   customPaceKgPerWeek: null,
@@ -20,8 +19,9 @@ describe('buildSetup', () => {
     const s = buildSetup(form, ctx);
     expect(s.goal).toMatchObject({ id: 'g2', startDate: '2026-09-27', startWeightKg: 90, targetWeightKg: 80, preset: 'relaxed', active: true });
     expect(s.goal.dailyDeficitKcal).toBeCloseTo(495, 6);
-    expect(s.profile).toMatchObject({ sex: 'male', heightCm: 178, activityLevel: 'moderate', activeGoalId: 'g2', constraints: { protein: { max: 120 } } });
-    expect(s.profile.settings.lowDayThresholdKcal).toBe(800);
+    expect(s.profile).toMatchObject({ sex: 'male', heightCm: 178, activeGoalId: 'g2', constraints: { protein: { max: 120 } } });
+    expect(s.profile).not.toHaveProperty('activityLevel');
+    expect(s.profile.settings).toEqual({ lowDayThresholdKcal: 800, defaultSteps: 3500, missingDayKcal: 3200 });
     expect(s.computed.macroTargets.protein).toBe(120);
     expect(s.weighIn).toEqual({ date: '2026-09-27', kg: 90, time: '10:00' });
     expect(s.previousGoalId).toBeNull();
@@ -68,12 +68,12 @@ describe('validateStep', () => {
   });
 
   it('requires a target below the current weight and a custom pace when chosen', () => {
-    expect(validateStep(2, { ...form, targetWeightKg: 95 }, '2026-09-27')).toContain('נמוך');
-    expect(validateStep(2, { ...form, preset: 'custom', customPaceKgPerWeek: null }, '2026-09-27')).toContain('קצב');
+    expect(validateStep(1, { ...form, targetWeightKg: 95 }, '2026-09-27')).toContain('נמוך');
+    expect(validateStep(1, { ...form, preset: 'custom', customPaceKgPerWeek: null }, '2026-09-27')).toContain('קצב');
   });
 
   it('checks that constraint minimums are not above maximums', () => {
-    expect(validateStep(3, { ...form, constraints: { ...form.constraints, proteinMin: 150, proteinMax: 120 } }, '2026-09-27')).toContain('חלבון');
+    expect(validateStep(2, { ...form, constraints: { ...form.constraints, proteinMin: 150, proteinMax: 120 } }, '2026-09-27')).toContain('חלבון');
   });
 });
 
@@ -89,7 +89,7 @@ describe('initialForm and previewSetup', () => {
     // BMR: 10·90 + 6.25·178 − 5·35 + 5 = 1842.5
     expect(p.bmrKcal).toBeCloseTo(1842.5, 6);
     expect(p.deficitKcal).toBeCloseTo(495, 6);
-    expect(p.typicalTargetKcal).toBeCloseTo(1842.5 * 1.55 - 495, 6);
+    expect(p.typicalTargetKcal).toBeCloseTo(1842.5 + 3500 * 0.5 * 90 * (0.415 * 178) / 100 / 1000 - 495, 4);
     // (90 − 80) / 0.45 kg per week × 7 = 155.6 → 156 days after 2026-09-27
     expect(p.etaDate).toBe('2027-03-02');
   });

@@ -21,9 +21,8 @@ describe('weightView', () => {
     expect(v.trend.at(-1)).toBeCloseTo(85.9, 6);
   });
 
-  it('computes status against the plan and a flat target line', () => {
+  it('computes the plan and a flat target line', () => {
     expect(v.plannedKg).toBeCloseTo(90 - (0.45 * 26) / 7, 6);
-    expect(v.status).toBe('ahead');
     expect(new Set(v.target)).toEqual(new Set([80]));
     expect(v.eta).toBeNull();
     expect(v.gap).toBeNull();

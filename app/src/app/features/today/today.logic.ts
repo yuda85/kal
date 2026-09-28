@@ -11,6 +11,5 @@ export function staleSyncHours(lastSyncAt: string | undefined, now: Date): numbe
 
 export function breakdownText(s: DaySummary): string {
   const e = s.expenditure;
-  if (e.source === 'fallback') return `BMR ${fmt(e.bmr)} × רמת פעילות = ${fmt(e.out)} (אין נתוני פעילות)`;
-  return `BMR ${fmt(e.bmr)} · צעדים ${fmt(e.steps)} → ${fmt(e.stepsKcal)} · אימונים → ${fmt(e.workoutsKcal)}`;
+  return `BMR ${fmt(e.bmr)} · צעדים ${fmt(e.steps)}${e.stepsSource === 'default' ? '*' : ''} → ${fmt(e.stepsKcal)} · אימונים → ${fmt(e.workoutsKcal)}`;
 }

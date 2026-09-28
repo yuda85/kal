@@ -58,4 +58,26 @@ describe('KalState', () => {
     expect(state.uid()).toBeNull();
     expect(state.entries()).toEqual([]);
   });
+
+  it('penalizes a finished day without food and exposes the weight reality', () => {
+    const state = setup();
+    expect(state.dayFor('2026-09-26')!.imputed).toBe(true);
+    expect(state.dayFor('2026-09-27')!.imputed).toBe(false);
+    expect(state.recentEnergy()).toHaveLength(14);
+    expect(state.recentEnergy().at(-1)).toMatchObject({ date: '2026-09-26', inKcal: 3200 });
+    expect(state.reality()!.status).toBe('no_data');
+  });
+
+  it('works with a legacy profile that still has an activity level', () => {
+    const state = setup();
+    expect(state.todaySummary()!.expenditure.stepsSource).toBe('garmin');
+  });
+
+  it('waits for days and weigh-ins before whenLoaded resolves', async () => {
+    const repo = seededRepository();
+    repo.watchDays = () => () => undefined;
+    const state = setup(repo);
+    const first = await Promise.race([state.whenLoaded().then(() => 'loaded'), new Promise((r) => setTimeout(() => r('waiting'), 20))]);
+    expect(first).toBe('waiting');
+  });
 });

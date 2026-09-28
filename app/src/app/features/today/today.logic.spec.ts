@@ -10,15 +10,15 @@ describe('today logic', () => {
 
   it('describes the expenditure breakdown', () => {
     const text = breakdownText({
-      expenditure: { bmr: 1792.5, steps: 15200, stepsKcal: 288.8, workouts: [], workoutsKcal: 464, out: 2545.3, source: 'measured' },
+      expenditure: { bmr: 1792.5, steps: 15200, stepsKcal: 288.8, workouts: [], workoutsKcal: 464, out: 2545.3, stepsSource: 'garmin' },
     } as never);
     expect(text).toBe('BMR 1,793 · צעדים 15,200 → 289 · אימונים → 464');
   });
 
-  it('marks the activity-level fallback', () => {
+  it('marks defaulted steps', () => {
     const text = breakdownText({
-      expenditure: { bmr: 1792.5, steps: 0, stepsKcal: 0, workouts: [], workoutsKcal: 0, out: 2778.4, source: 'fallback' },
+      expenditure: { bmr: 1792.5, steps: 3500, stepsSource: 'default', stepsKcal: 109.9, workouts: [], workoutsKcal: 0, out: 1902.4 },
     } as never);
-    expect(text).toBe('BMR 1,793 × רמת פעילות = 2,778 (אין נתוני פעילות)');
+    expect(text).toBe('BMR 1,793 · צעדים 3,500* → 110 · אימונים → 0');
   });
 });

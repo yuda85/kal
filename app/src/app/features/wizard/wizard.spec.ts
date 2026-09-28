@@ -13,11 +13,11 @@ async function openSummary(repo: FakeRepository) {
   const fixture = TestBed.createComponent(Wizard);
   const w = fixture.componentInstance as unknown as { form: { set(v: unknown): void }; step: { set(v: number): void }; save(): Promise<void> };
   w.form.set({
-    sex: 'male', birthDate: '1991-05-10', heightCm: 178, currentWeightKg: 90, bodyFatPct: null, activityLevel: 'moderate',
+    sex: 'male', birthDate: '1991-05-10', heightCm: 178, currentWeightKg: 90, bodyFatPct: null,
     targetWeightKg: 80, preset: 'relaxed', customPaceKgPerWeek: null,
     constraints: { kcalMin: null, kcalMax: null, proteinMin: null, proteinMax: null, carbsMax: null, fatMax: null },
   });
-  w.step.set(4);
+  w.step.set(3);
   await fixture.whenStable();
   return { fixture, w };
 }
@@ -33,7 +33,7 @@ describe('Wizard editing', () => {
     const fixture = TestBed.createComponent(Wizard);
     const w = fixture.componentInstance as unknown as { form(): { currentWeightKg: number; constraints: { proteinMax: number | null } }; step: { set(v: number): void }; skip(): void };
     expect(w.form().currentWeightKg).toBe(85);
-    w.step.set(3);
+    w.step.set(2);
     w.skip();
     expect(w.form().constraints.proteinMax).toBe(120);
   });

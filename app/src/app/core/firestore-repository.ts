@@ -54,6 +54,9 @@ export class FirestoreKalRepository extends KalRepository {
       manualByDate.set(a.date, manual);
       batch.set(doc(this.col(uid, 'days'), a.date), { manual }, { merge: true });
     }
+    for (const date of writes.checkIns) {
+      batch.set(doc(this.col(uid, 'days'), date), { checkedInAt: new Date().toISOString() }, { merge: true });
+    }
     return batch.commit();
   }
 

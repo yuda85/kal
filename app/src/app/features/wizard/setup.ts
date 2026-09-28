@@ -1,13 +1,12 @@
 import {
-  ACTIVITY_FACTORS,
   addDays,
   ageOn,
   bmr,
   dailyDeficit,
   isValidDate,
+  kcalPerStep,
   macroTargets,
   makeGoal,
-  type ActivityLevel,
   type Constraints,
   type Goal,
   type PacePreset,
@@ -31,7 +30,6 @@ export interface SetupForm {
   heightCm: number | null;
   currentWeightKg: number | null;
   bodyFatPct: number | null;
-  activityLevel: ActivityLevel;
   targetWeightKg: number | null;
   preset: PacePreset;
   customPaceKgPerWeek: number | null;
@@ -68,7 +66,6 @@ export function initialForm(profile: Profile | null, goal: Goal | null, latestKg
     heightCm: profile?.heightCm ?? null,
     currentWeightKg: latestKg,
     bodyFatPct: profile?.bodyFatPct ?? null,
-    activityLevel: profile?.activityLevel ?? 'moderate',
     targetWeightKg: goal?.targetWeightKg ?? null,
     preset: goal?.preset ?? 'relaxed',
     customPaceKgPerWeek: goal?.preset === 'custom' ? goal.paceKgPerWeek : null,
@@ -94,12 +91,12 @@ export function validateStep(step: number, f: SetupForm, today: string): string 
     if (!inRange(f.currentWeightKg, 30, 300)) return 'משקל: בין 30 ל-300 ק״ג';
     if (f.bodyFatPct !== null && !inRange(f.bodyFatPct, 3, 60)) return 'אחוז שומן: בין 3 ל-60';
   }
-  if (step === 2) {
+  if (step === 1) {
     if (!inRange(f.targetWeightKg, 30, 300)) return 'משקל יעד: בין 30 ל-300 ק״ג';
     if (f.currentWeightKg !== null && f.targetWeightKg! >= f.currentWeightKg) return 'משקל היעד צריך להיות נמוך מהמשקל הנוכחי';
     if (f.preset === 'custom' && !inRange(f.customPaceKgPerWeek, 0.1, 1.5)) return 'קצב מותאם: בין 0.1 ל-1.5 ק״ג בשבוע';
   }
-  if (step === 3) {
+  if (step === 2) {
     const c = f.constraints;
     const values = [c.kcalMin, c.kcalMax, c.proteinMin, c.proteinMax, c.carbsMax, c.fatMax];
     if (values.some((v) => v !== null && !inRange(v, 0, 10000))) return 'מגבלות: מספרים חיוביים בלבד';
@@ -124,7 +121,7 @@ export function previewSetup(f: SetupForm, today: string) {
   return {
     bmrKcal,
     deficitKcal,
-    typicalTargetKcal: bmrKcal * ACTIVITY_FACTORS[f.activityLevel] - deficitKcal,
+    typicalTargetKcal: bmrKcal + kcalPerStep(f.currentWeightKg, f.heightCm) * 3500 - deficitKcal,
     etaDate: addDays(today, days),
   };
 }
@@ -135,6 +132,7 @@ export function buildSetup(
 ): SetupWrite {
   const weight = f.currentWeightKg!;
   const prev = ctx.previousGoal;
+  const prevSettings = ctx.previousProfile?.settings;
   const sameGoal =
     prev !== null &&
     prev.targetWeightKg === f.targetWeightKg &&
@@ -156,9 +154,12 @@ export function buildSetup(
     birthDate: f.birthDate,
     heightCm: f.heightCm!,
     ...(f.bodyFatPct !== null ? { bodyFatPct: f.bodyFatPct } : {}),
-    activityLevel: f.activityLevel,
     constraints,
-    settings: { lowDayThresholdKcal: ctx.previousProfile?.settings?.lowDayThresholdKcal ?? 800 },
+    settings: {
+      lowDayThresholdKcal: prevSettings?.lowDayThresholdKcal ?? 800,
+      defaultSteps: prevSettings?.defaultSteps ?? 3500,
+      missingDayKcal: prevSettings?.missingDayKcal ?? 3200,
+    },
     activeGoalId: goal.id,
     ...(ctx.previousProfile?.garminLastSyncAt ? { garminLastSyncAt: ctx.previousProfile.garminLastSyncAt } : {}),
   };

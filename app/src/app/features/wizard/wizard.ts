@@ -6,7 +6,7 @@ import { localTime, newLinkId } from '../../domain';
 import { fmt, num, shortDate } from '../../shared/format';
 import { buildSetup, initialForm, previewSetup, validateStep, type ConstraintFields, type SetupForm } from './setup';
 
-const STEPS = ['פרופיל', 'פעילות', 'יעד', 'מגבלות', 'סיכום'];
+const STEPS = ['פרופיל', 'יעד', 'מגבלות', 'סיכום'];
 
 @Component({
   selector: 'app-wizard',
@@ -28,15 +28,6 @@ const STEPS = ['פרופיל', 'פעילות', 'יעד', 'מגבלות', 'סיכ
           <label>אחוז שומן (לא חובה)<input type="number" inputmode="decimal" [value]="form().bodyFatPct ?? ''" (input)="set('bodyFatPct', num($any($event.target).value))" /></label>
         }
         @case (1) {
-          <p class="muted small">משמש רק לימים בלי נתוני Garmin.</p>
-          <label>רמת פעילות
-            <select [value]="form().activityLevel" (change)="set('activityLevel', $any($event.target).value)">
-              <option value="sedentary">יושבני</option><option value="light">קלה</option>
-              <option value="moderate">בינונית</option><option value="high">גבוהה</option>
-            </select>
-          </label>
-        }
-        @case (2) {
           <label>משקל יעד (ק״ג)<input type="number" inputmode="decimal" [value]="form().targetWeightKg ?? ''" (input)="set('targetWeightKg', num($any($event.target).value))" /></label>
           <label>קצב
             <select [value]="form().preset" (change)="set('preset', $any($event.target).value)">
@@ -47,7 +38,7 @@ const STEPS = ['פרופיל', 'פעילות', 'יעד', 'מגבלות', 'סיכ
             <label>ק״ג בשבוע<input type="number" inputmode="decimal" [value]="form().customPaceKgPerWeek ?? ''" (input)="set('customPaceKgPerWeek', num($any($event.target).value))" /></label>
           }
         }
-        @case (3) {
+        @case (2) {
           <p class="muted small">מלא רק מה שרלוונטי, למשל תקרת חלבון.</p>
           <div class="grid">
             <label>קלוריות מינ׳<input type="number" inputmode="decimal" [value]="form().constraints.kcalMin ?? ''" (input)="setC('kcalMin', $any($event.target).value)" /></label>
@@ -58,7 +49,7 @@ const STEPS = ['פרופיל', 'פעילות', 'יעד', 'מגבלות', 'סיכ
             <label>שומן מקס׳ (ג׳)<input type="number" inputmode="decimal" [value]="form().constraints.fatMax ?? ''" (input)="setC('fatMax', $any($event.target).value)" /></label>
           </div>
         }
-        @case (4) {
+        @case (3) {
           @if (preview(); as p) {
             <dl class="card summary">
               <div class="row"><dt>BMR</dt><dd class="num">{{ fmt(p.bmrKcal) }}</dd></div>
@@ -87,7 +78,7 @@ const STEPS = ['פרופיל', 'פעילות', 'יעד', 'מגבלות', 'סיכ
         @if (step() > 0) {
           <button type="button" (click)="back()">חזרה</button>
         }
-        @if (step() === 3) {
+        @if (step() === 2) {
           <button type="button" (click)="skip()">דלג</button>
         }
         @if (step() < steps.length - 1) {

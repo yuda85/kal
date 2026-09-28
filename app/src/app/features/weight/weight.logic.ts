@@ -2,14 +2,12 @@ import {
   addDays,
   dateRange,
   eta,
-  planStatus,
   plannedWeight,
   reportGap,
   trendOn,
   trendSeries,
   type DayEnergy,
   type Goal,
-  type PlanStatus,
   type ReportGap,
   type WeighIn,
 } from '../../domain';
@@ -17,16 +15,9 @@ import { shortDate } from '../../shared/format';
 
 export const WEIGHT_WINDOW_DAYS = 84;
 
-export const STATUS_TEXT: Record<PlanStatus, string> = {
-  on_track: 'בקצב',
-  ahead: 'מקדים',
-  behind: 'מאחור',
-};
-
 export interface WeightView {
   trendKg: number | null;
   plannedKg: number;
-  status: PlanStatus | null;
   eta: string | null;
   gap: ReportGap | null;
   labels: string[];
@@ -47,7 +38,6 @@ export function weightView(input: { today: string; goal: Goal; weighIns: WeighIn
   return {
     trendKg,
     plannedKg,
-    status: trendKg === null ? null : planStatus(trendKg, plannedKg),
     eta: eta(series, goal, today),
     gap: reportGap({ today, goal, energy: input.energy, series, lowDayThresholdKcal: input.lowDayThresholdKcal }),
     labels: dates.map(shortDate),
