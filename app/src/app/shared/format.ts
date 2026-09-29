@@ -13,6 +13,12 @@ export function signed(n: number): string {
   return r > 0 ? `+${fmt(r)}` : r < 0 ? `−${fmt(-r)}` : '0';
 }
 
+/** A weight change with one decimal and a real minus: −0.5, +0.3, 0. */
+export function signedKg(n: number): string {
+  const r = Math.round(n * 10) / 10;
+  return r > 0 ? `+${fmt(r, 1)}` : r < 0 ? `−${fmt(-r, 1)}` : '0';
+}
+
 export function num(value: string): number | null {
   if (value.trim() === '') return null;
   const n = Number(value);

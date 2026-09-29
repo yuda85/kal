@@ -87,36 +87,3 @@ export function weekChart(
   };
   return new Chart(canvas, config);
 }
-
-export function weightChart(
-  canvas: HTMLCanvasElement,
-  labels: string[],
-  trend: (number | null)[],
-  plan: (number | null)[],
-  target: (number | null)[],
-  weighIns: (number | null)[],
-): Chart<'line'> {
-  themeDefaults();
-  const muted = token('--neutral-bar', '#888780');
-  const config: ChartConfiguration<'line', (number | null)[], string> = {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'מגמה', data: trend, borderColor: token('--out', '#1D9E75'), borderWidth: 2.5, pointRadius: 0, tension: 0.3, spanGaps: true },
-        { label: 'תוכנית', data: plan, borderColor: token('--primary', '#0F6E56'), borderWidth: 2, borderDash: [6, 4], pointRadius: 0 },
-        { label: 'יעד', data: target, borderColor: muted, borderWidth: 2, borderDash: [2, 3], pointRadius: 0 },
-        { label: 'שקילות', data: weighIns, showLine: false, pointRadius: 3, pointBackgroundColor: muted, borderColor: muted },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: { mode: 'index', intersect: false },
-      scales: { x: { type: 'category', reverse: false }, y: { type: 'linear', grace: '5%' } },
-      plugins: rtl,
-    },
-  };
-  return new Chart(canvas, config);
-}

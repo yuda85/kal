@@ -1,4 +1,4 @@
-import { dayLetter, fmt, num, shortDate, signed, warningText } from './format';
+import { dayLetter, fmt, num, shortDate, signed, signedKg, warningText } from './format';
 
 describe('format', () => {
   it('formats numbers with separators and a dash for missing values', () => {
@@ -13,6 +13,12 @@ describe('format', () => {
     expect(signed(-1047.4)).toBe('−1,047');
     expect(signed(-0.3)).toBe('0');
     expect(fmt(0.4611, 2)).toBe('0.46');
+  });
+
+  it('signs kilograms with one decimal and a real minus', () => {
+    expect(signedKg(-0.46)).toBe('−0.5');
+    expect(signedKg(0.3)).toBe('+0.3');
+    expect(signedKg(-0.04)).toBe('0');
   });
 
   it('parses input values, empty as null', () => {
