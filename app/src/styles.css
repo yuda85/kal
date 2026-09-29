@@ -21,6 +21,7 @@
   --warning-fg: #92400E;
   --success-bg: #D1FAE5;
   --success-fg: #047857;
+  --star: #B45309;
   --radius: 8px;
   --radius-card: 12px;
   color-scheme: light dark;
@@ -49,6 +50,7 @@
     --warning-fg: #FCD34D;
     --success-bg: #064E3B;
     --success-fg: #6EE7B7;
+    --star: #FBBF24;
   }
 }
 

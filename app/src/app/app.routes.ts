@@ -14,6 +14,7 @@ export const routes: Routes = [
       { path: 'confirm', loadComponent: () => import('./features/confirm/confirm').then((m) => m.Confirm) },
       { path: 'week', loadComponent: () => import('./features/week/week').then((m) => m.Week) },
       { path: 'weight', loadComponent: () => import('./features/weight/weight').then((m) => m.WeightPage) },
+      { path: 'tips', loadComponent: () => import('./features/tips/tips').then((m) => m.Tips) },
       { path: 'recipes', loadComponent: () => import('./features/recipes/recipes').then((m) => m.Recipes) },
       { path: 'settings', loadComponent: () => import('./features/settings/settings').then((m) => m.Settings) },
     ],

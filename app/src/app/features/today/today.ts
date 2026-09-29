@@ -7,6 +7,7 @@ import { fmt, warningText } from '../../shared/format';
 import { realityLine } from '../../shared/reality-line';
 import { shouldPromptCheckIn } from '../checkin/checkin.logic';
 import { CheckInService } from '../checkin/checkin.service';
+import { DailyTipService } from '../tips/daily-tip.service';
 import { QuickAddService } from './quick-add.service';
 import { TargetCard } from './target-card';
 import { staleSyncHours, targetBreakdown } from './today.logic';
@@ -100,6 +101,7 @@ export class Today {
   protected readonly summary = this.state.todaySummary;
   protected readonly staleHours = computed(() => staleSyncHours(this.state.profile()?.garminLastSyncAt, this.state.now()));
   protected readonly checkin = inject(CheckInService);
+  private readonly dailyTip = inject(DailyTipService);
   protected readonly weighIn = this.state.todayWeighIn;
   protected readonly reality = computed(() => realityLine(this.state.reality()));
   protected readonly breakdown = computed(() => {
@@ -116,7 +118,7 @@ export class Today {
       if (this.checkin.open()) {
         // A sheet that opened by itself goes away once the day turns out to be checked in (e.g. on another device).
         if (this.checkin.auto() && day?.checkedInAt) this.checkin.close();
-      } else if (shouldPromptCheckIn(this.state.now(), day, this.checkin.dismissedFor() === today)) {
+      } else if (!this.dailyTip.pick() && shouldPromptCheckIn(this.state.now(), day, this.checkin.dismissedFor() === today)) {
         this.checkin.show(true);
       }
     });

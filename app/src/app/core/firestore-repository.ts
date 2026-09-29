@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { collection, deleteDoc, doc, onSnapshot, query, setDoc, where, writeBatch } from 'firebase/firestore';
-import { mergeManual, type Day, type Entry, type Goal, type PlannedWrites, type Profile, type Recipe, type WeighIn } from '../domain';
+import { EMPTY_TIP_STATE, mergeManual, type Day, type Entry, type Goal, type PlannedWrites, type Profile, type Recipe, type TipState, type WeighIn } from '../domain';
 import { firestore } from './firebase';
-import { KalRepository, type SetupWrite, type Unsubscribe } from './repository';
+import { KalRepository, type SavedVideo, type SetupWrite, type Unsubscribe } from './repository';
 
 @Injectable()
 export class FirestoreKalRepository extends KalRepository {
@@ -54,6 +54,9 @@ export class FirestoreKalRepository extends KalRepository {
       manualByDate.set(a.date, manual);
       batch.set(doc(this.col(uid, 'days'), a.date), { manual }, { merge: true });
     }
+    for (const { id, ...video } of writes.videos) {
+      batch.set(doc(this.col(uid, 'videos'), id), { ...video, addedAt: new Date().toISOString() });
+    }
     for (const date of writes.checkIns) {
       batch.set(doc(this.col(uid, 'days'), date), { checkedInAt: new Date().toISOString() }, { merge: true });
     }
@@ -71,6 +74,26 @@ export class FirestoreKalRepository extends KalRepository {
 
   deleteRecipe(uid: string, id: string): Promise<void> {
     return deleteDoc(doc(this.col(uid, 'recipes'), id));
+  }
+
+  private tipsDoc(uid: string) {
+    return doc(this.db, 'users', uid, 'meta', 'tips');
+  }
+
+  watchTipState(uid: string, cb: (state: TipState) => void): Unsubscribe {
+    return onSnapshot(this.tipsDoc(uid), (s) => cb(s.exists() ? { ...EMPTY_TIP_STATE, ...(s.data() as Partial<TipState>) } : EMPTY_TIP_STATE));
+  }
+
+  saveTipState(uid: string, state: TipState): Promise<void> {
+    return setDoc(this.tipsDoc(uid), state);
+  }
+
+  watchVideos(uid: string, cb: (videos: SavedVideo[]) => void): Unsubscribe {
+    return onSnapshot(this.col(uid, 'videos'), (qs) => cb(qs.docs.map((d) => ({ ...(d.data() as Omit<SavedVideo, 'id'>), id: d.id }))));
+  }
+
+  deleteVideo(uid: string, id: string): Promise<void> {
+    return deleteDoc(doc(this.col(uid, 'videos'), id));
   }
 
   saveSetup(uid: string, setup: SetupWrite): Promise<void> {

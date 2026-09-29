@@ -1,6 +1,6 @@
 import { FISH_BALLS, testGoal, testProfile } from '../../../domain/testing.ts';
-import type { Day, Entry, Goal, PlannedWrites, Profile, Recipe, WeighIn } from '../app/domain';
-import { KalRepository, type SetupWrite, type Unsubscribe } from '../app/core/repository';
+import { EMPTY_TIP_STATE, type Day, type Entry, type Goal, type PlannedWrites, type Profile, type Recipe, type TipState, type WeighIn } from '../app/domain';
+import { KalRepository, type SavedVideo, type SetupWrite, type Unsubscribe } from '../app/core/repository';
 
 export const NOW = new Date('2026-09-27T10:00:00Z');
 
@@ -16,6 +16,10 @@ export class FakeRepository extends KalRepository {
   deletedEntries: string[] = [];
   deletedRecipes: string[] = [];
   setups: SetupWrite[] = [];
+  tipState: TipState = EMPTY_TIP_STATE;
+  savedTipStates: TipState[] = [];
+  videos: SavedVideo[] = [];
+  deletedVideos: string[] = [];
   writeMode: 'resolve' | 'hang' | 'permission-denied' = 'resolve';
 
   private result(): Promise<void> {
@@ -70,6 +74,22 @@ export class FakeRepository extends KalRepository {
     this.setups.push(setup);
     return this.result();
   }
+  watchTipState(_uid: string, cb: (state: TipState) => void): Unsubscribe {
+    cb(this.tipState);
+    return () => undefined;
+  }
+  saveTipState(_uid: string, state: TipState): Promise<void> {
+    this.savedTipStates.push(state);
+    return this.result();
+  }
+  watchVideos(_uid: string, cb: (videos: SavedVideo[]) => void): Unsubscribe {
+    cb(this.videos);
+    return () => undefined;
+  }
+  deleteVideo(_uid: string, id: string): Promise<void> {
+    this.deletedVideos.push(id);
+    return this.result();
+  }
 }
 
 export function seededRepository(): FakeRepository {
@@ -79,6 +99,8 @@ export function seededRepository(): FakeRepository {
   repo.weighIns = [{ date: '2026-09-27', kg: 85 }];
   repo.days = [{ date: '2026-09-27', garmin: { steps: 15200, workouts: [{ type: 'running', durationMin: 45, kcal: 520, steps: 6000 }] } }];
   repo.entries = [{ id: 'seed0001', date: '2026-09-27', time: '08:10', name: 'יוגורט', kcal: 320, protein: 20, carbs: 40, fat: 8, source: 'link' }];
+  // Today's tip already closed, so the daily-tip dialog stays out of unrelated tests.
+  repo.tipState = { ...EMPTY_TIP_STATE, lastDate: '2026-09-27' };
   repo.recipes = [{ id: 'fish-balls', name: 'קציצות דגים', aliases: ['קציצות'], ingredients: FISH_BALLS, yield: { units: 20, unitName: 'קציצה' } }];
   return repo;
 }

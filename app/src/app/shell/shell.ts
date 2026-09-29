@@ -1,15 +1,17 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { LucideCalendarDays, LucideChefHat, LucideHouse, LucideScale, LucideSettings } from '@lucide/angular';
+import { LucideCalendarDays, LucideChefHat, LucideHouse, LucideLightbulb, LucideScale, LucideSettings } from '@lucide/angular';
 import { Toast } from '../core/toast';
 import { CheckIn } from '../features/checkin/checkin';
 import { CheckInService } from '../features/checkin/checkin.service';
 import { QuickAdd } from '../features/today/quick-add';
 import { QuickAddService } from '../features/today/quick-add.service';
+import { DailyTip } from '../features/tips/daily-tip';
+import { DailyTipService } from '../features/tips/daily-tip.service';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideHouse, LucideCalendarDays, LucideScale, LucideChefHat, LucideSettings, QuickAdd, CheckIn],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideHouse, LucideCalendarDays, LucideScale, LucideChefHat, LucideLightbulb, LucideSettings, QuickAdd, CheckIn, DailyTip],
   template: `
     <header class="top row">
       <strong>kal</strong>
@@ -25,11 +27,15 @@ import { QuickAddService } from '../features/today/quick-add.service';
     @if (checkin.open()) {
       <app-checkin />
     }
+    @if (dailyTip.pick()) {
+      <app-daily-tip />
+    }
     <nav class="tabs" aria-label="ניווט">
       <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }"><svg lucideHouse [size]="20"></svg>היום</a>
       <a routerLink="/week" routerLinkActive="on"><svg lucideCalendarDays [size]="20"></svg>שבוע</a>
       <a routerLink="/weight" routerLinkActive="on"><svg lucideScale [size]="20"></svg>משקל</a>
       <a routerLink="/recipes" routerLinkActive="on"><svg lucideChefHat [size]="20"></svg>מתכונים</a>
+      <a routerLink="/tips" routerLinkActive="on"><svg lucideLightbulb [size]="20"></svg>טיפים</a>
     </nav>
   `,
   styles: `
@@ -42,7 +48,7 @@ import { QuickAddService } from '../features/today/quick-add.service';
       background: var(--card); border-block-start: 1px solid var(--border);
       padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); z-index: 3;
     }
-    .tabs a { display: grid; justify-items: center; gap: 2px; min-width: 64px; min-height: 44px; font-size: 11px; color: var(--fg-muted); text-decoration: none; }
+    .tabs a { display: grid; justify-items: center; gap: 2px; min-width: 56px; min-height: 44px; font-size: 11px; color: var(--fg-muted); text-decoration: none; }
     .tabs a.on { color: var(--out); }
     .toast {
       position: fixed; inset-inline: 16px; inset-block-end: calc(80px + env(safe-area-inset-bottom));
@@ -54,4 +60,5 @@ export class Shell {
   protected readonly toast = inject(Toast);
   protected readonly quickAdd = inject(QuickAddService);
   protected readonly checkin = inject(CheckInService);
+  protected readonly dailyTip = inject(DailyTipService);
 }

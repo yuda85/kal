@@ -55,5 +55,6 @@ export function checkInWrites(d: CheckInDraft, date: string, now: Date, initial?
       },
     ],
     checkIns: [date],
+    videos: [],
   };
 }

@@ -1,12 +1,15 @@
 import { TestBed } from '@angular/core/testing';
-import { NOW, seededRepository } from '../../../testing/fake-repository';
+import { NOW, seededRepository, type FakeRepository } from '../../../testing/fake-repository';
 import { KalState } from '../../core/kal-state';
 import { KalRepository } from '../../core/repository';
+import { EMPTY_TIP_STATE } from '../../domain';
 import { CheckInService } from '../checkin/checkin.service';
 import { Today } from './today';
 
-async function render(now = NOW) {
-  TestBed.configureTestingModule({ imports: [Today], providers: [{ provide: KalRepository, useValue: seededRepository() }] });
+async function render(now = NOW, prepare: (repo: FakeRepository) => void = () => undefined) {
+  const repo = seededRepository();
+  prepare(repo);
+  TestBed.configureTestingModule({ imports: [Today], providers: [{ provide: KalRepository, useValue: repo }] });
   const state = TestBed.inject(KalState);
   state.now.set(now);
   state.start('u1');
@@ -29,6 +32,11 @@ describe('Today', () => {
   it('opens the check-in automatically after 22:00', async () => {
     await render(new Date('2026-09-27T19:30:00Z'));
     expect(TestBed.inject(CheckInService).open()).toBe(true);
+  });
+
+  it('waits with the check-in while the daily tip is still open', async () => {
+    await render(new Date('2026-09-27T19:30:00Z'), (repo) => (repo.tipState = EMPTY_TIP_STATE));
+    expect(TestBed.inject(CheckInService).open()).toBe(false);
   });
 
   it('does not open the check-in before 22:00', async () => {

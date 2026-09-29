@@ -14,9 +14,10 @@ import {
   type Profile,
   type Reality,
   type Recipe,
+  type TipState,
   type WeighIn,
 } from '../domain';
-import { KalRepository, type Unsubscribe } from './repository';
+import { KalRepository, type SavedVideo, type Unsubscribe } from './repository';
 
 export const ENTRY_WINDOW_DAYS = 90;
 
@@ -38,6 +39,9 @@ export class KalState {
   readonly days = signal<Day[]>([]);
   readonly weighIns = signal<WeighIn[]>([]);
   readonly recipes = signal<Recipe[]>([]);
+  /** `undefined` until the tips document arrives. */
+  readonly tipState = signal<TipState | undefined>(undefined);
+  readonly videos = signal<SavedVideo[]>([]);
   readonly now = signal(new Date());
 
   readonly today = computed(() => localDate(this.now()));
@@ -103,6 +107,8 @@ export class KalState {
         weighInsArrived();
       }),
       this.repo.watchRecipes(uid, (r) => this.recipes.set(r)),
+      this.repo.watchTipState(uid, (t) => this.tipState.set(t)),
+      this.repo.watchVideos(uid, (v) => this.videos.set(v)),
     ];
     this.timer = setInterval(() => this.refreshNow(), 60_000);
     document.addEventListener('visibilitychange', this.onForeground);
@@ -126,6 +132,8 @@ export class KalState {
     this.days.set([]);
     this.weighIns.set([]);
     this.recipes.set([]);
+    this.tipState.set(undefined);
+    this.videos.set([]);
   }
 
   whenLoaded(): Promise<void> {
