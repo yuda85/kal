@@ -5,6 +5,7 @@ import { plannedWeight } from './plan.ts';
 import { settingsOf } from './settings.ts';
 import { dailyTarget, KCAL_PER_KG, macroTargets, typicalTarget } from './targets.ts';
 import { trendOn, trendSeries } from './trend.ts';
+import { weightChange } from './weekly.ts';
 import type { Day, Entry, Goal, Profile, Range, WeighIn } from './types.ts';
 
 export type MacroKey = 'kcal' | 'protein' | 'carbs' | 'fat';
@@ -147,7 +148,7 @@ export interface RangeSummary {
   avgDeficitKcal: number | null;
   avgProtein: number | null;
   workoutsCount: number;
-  trendChangeKg: number | null;
+  weightChangeKg: number | null;
   weightDeficitKcal: number | null;
 }
 
@@ -171,16 +172,9 @@ function summarizeRange(start: string, end: string, input: RangeInput): RangeSum
   );
   const finished = days.filter((d) => d.date < input.today && d.date >= input.goal.startDate);
   const logged = finished.filter((d) => !d.imputed);
-  const lastDate = dates.at(-1) ?? start;
-  const series = trendSeries(input.weighIns, lastDate);
-  const weighedInRange = input.weighIns.some((w) => w.date >= start && w.date <= lastDate);
-  const trendEnd = weighedInRange ? trendOn(series, lastDate) : null;
-  const before = trendOn(series, addDays(start, -1));
-  // Without a trend point before the range, measure from the first of at least two weigh-ins inside it (carried days do not count).
-  const inRange = series.filter((p) => !p.carried && p.date >= start && p.date <= lastDate);
-  const from = before !== null ? { date: addDays(start, -1), kg: before } : inRange.length > 1 ? inRange[0] : null;
-  const span = from ? daysBetween(from.date, lastDate) : 0;
-  const trendChangeKg = trendEnd !== null && from !== null && span > 0 ? trendEnd - from.kg : null;
+  // Mean of real weigh-ins vs the previous range of the same length (§16); the trend stays for status and ETA.
+  const weightChangeKg = weightChange(input.weighIns, start, end, input.today);
+  const length = daysBetween(start, end) + 1;
   return {
     start,
     end,
@@ -192,8 +186,8 @@ function summarizeRange(start: string, end: string, input: RangeInput): RangeSum
     avgDeficitKcal: average(finished.map((d) => d.expenditure.out - d.countedKcal)),
     avgProtein: average(logged.map((d) => d.intake.protein)),
     workoutsCount: days.reduce((n, d) => n + d.expenditure.workouts.length, 0),
-    trendChangeKg,
-    weightDeficitKcal: trendChangeKg === null || span <= 0 ? null : (-trendChangeKg * KCAL_PER_KG) / span,
+    weightChangeKg,
+    weightDeficitKcal: weightChangeKg === null ? null : (-weightChangeKg * KCAL_PER_KG) / length,
   };
 }
 

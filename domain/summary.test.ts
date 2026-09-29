@@ -149,9 +149,9 @@ describe('summarizeWeek', () => {
     expect(w.avgDeficitKcal).toBeCloseTo(w.avgOutKcal! - w.avgInKcal!, 6);
   });
 
-  it('compares the trend change with the plan prorated to the elapsed days', () => {
-    // Daily EWMA with carried days: 85.2 → 85.18 → 85.162 (09-28 carries 85) → 85.0958 → 85.03622 (09-30 carries 84.5)
-    expect(w.trendChangeKg).toBeCloseTo(-0.16378, 6);
+  it('compares the weekly change with the plan prorated to the elapsed days', () => {
+    // mean (85 + 84.5) / 2 = 84.75 vs last week's 85.2
+    expect(w.weightChangeKg).toBeCloseTo(-0.45, 10);
     // Saturday 09-26 → Wednesday 09-30 is 4 days of plan
     expect(w.plannedChangeKg).toBeCloseTo((-0.45 * 4) / 7, 10);
     expect(w.targetDeficitKcal).toBe(495);
@@ -176,7 +176,7 @@ describe('summarizeWeek', () => {
     expect(partial.avgInKcal).toBeCloseTo((1800 + 2000 + 3200) / 3, 6);
   });
 
-  it('reports no trend change for a week without weigh-ins', () => {
+  it('reports no weekly change for a week without weigh-ins', () => {
     const noWeights = summarizeWeek({
       date: '2026-09-30',
       today: '2026-09-30',
@@ -186,13 +186,13 @@ describe('summarizeWeek', () => {
       goal: testGoal,
       weighIns: [{ date: '2026-09-20', kg: 86 }, { date: '2026-09-25', kg: 85.5 }],
     });
-    expect(noWeights.trendChangeKg).toBeNull();
+    expect(noWeights.weightChangeKg).toBeNull();
   });
 
   it('returns null averages when nothing is logged', () => {
     const empty = summarizeWeek({ date: '2026-09-27', today: '2026-09-27', entries: [], days: [], profile: testProfile, goal: testGoal, weighIns: [] });
     expect(empty.avgInKcal).toBeNull();
-    expect(empty.trendChangeKg).toBeNull();
+    expect(empty.weightChangeKg).toBeNull();
   });
 
   it('counts workouts and the weight-implied deficit', () => {
@@ -202,21 +202,20 @@ describe('summarizeWeek', () => {
     ];
     const ww = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days, profile: testProfile, goal: testGoal, weighIns: weekWeighIns });
     expect(ww.workoutsCount).toBe(2);
-    // trend −0.16378 kg over the 4 days from 09-26 to 09-30
-    expect(ww.weightDeficitKcal).toBeCloseTo((0.16378 * 7700) / 4, 4);
+    // −0.45 kg over the 7-day week
+    expect(ww.weightDeficitKcal).toBeCloseTo((0.45 * 7700) / 7, 6);
   });
 
-  it('measures the weight trend from the first weigh-in when none came before the week', () => {
+  it('reports no weekly change without a weigh-in the week before', () => {
     const inside = [{ date: '2026-09-27', kg: 85 }, { date: '2026-09-29', kg: 84.5 }];
     const ww = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days: [], profile: testProfile, goal: testGoal, weighIns: inside });
-    // EWMA 85 → 85 (09-28 carries 85) → 84.95 → 84.905 (09-30 carries 84.5): −0.095 kg from 09-27 to 09-30 (3 days)
-    expect(ww.trendChangeKg).toBeCloseTo(-0.095, 6);
-    expect(ww.weightDeficitKcal).toBeCloseTo((0.095 * 7700) / 3, 4);
+    expect(ww.weightChangeKg).toBeNull();
+    expect(ww.weightDeficitKcal).toBeNull();
   });
 
-  it('reports no trend change from a single weigh-in', () => {
+  it('reports no weekly change from a single weigh-in', () => {
     const one = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days: [], profile: testProfile, goal: testGoal, weighIns: [{ date: '2026-09-29', kg: 85 }] });
-    expect(one.trendChangeKg).toBeNull();
+    expect(one.weightChangeKg).toBeNull();
     expect(one.weightDeficitKcal).toBeNull();
   });
 });
@@ -241,6 +240,21 @@ describe('summarizeMonth', () => {
     // goal starts 09-01: 1..14 finished, 2 logged, 12 penalized
     expect(m.daysLogged).toBe(2);
     expect(m.imputedDays).toBe(12);
+  });
+
+  it('compares the month mean with the previous equal-length span', () => {
+    const mm = summarizeMonth({
+      month: '2026-09',
+      today: '2026-09-15',
+      entries,
+      days,
+      profile: testProfile,
+      goal: testGoal,
+      weighIns: [{ date: '2026-08-20', kg: 88 }, { date: '2026-09-05', kg: 87 }, { date: '2026-09-12', kg: 86 }],
+    });
+    // 86.5 vs 88 (08-01..08-31); deficit over the 30-day month
+    expect(mm.weightChangeKg).toBeCloseTo(-1.5, 10);
+    expect(mm.weightDeficitKcal).toBeCloseTo((1.5 * 7700) / 30, 6);
   });
 
   it('knows month lengths', () => {

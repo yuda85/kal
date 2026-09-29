@@ -70,7 +70,7 @@ Collect ingredients with raw grams and the yield: number of units (with a unit n
 Answer from `read.ts` output. Round kcal and grams to whole numbers.
 
 - "כמה נשאר היום?" → `day` → `remainingKcal`, and protein, carbs and fat vs their targets (`macros.*.target`).
-- "איך השבוע?" → `profile` and `week` → lead with `profile.reality`; then `avgDeficitKcal` next to `weightDeficitKcal`, `trendChangeKg` vs `plannedChangeKg`, `workoutsCount`, `imputedDays`.
+- "איך השבוע?" → `profile` and `week` → lead with `profile.reality`; then `avgDeficitKcal` next to `weightDeficitKcal`, `weightChangeKg` (mean of this week's weigh-ins vs last week's) vs `plannedChangeKg`, `workoutsCount`, `imputedDays`.
 - "איך החודש?" → `profile` and `month` → lead with `profile.reality`; then `workoutsCount`, `workoutsPerWeek`, `imputedDays`, `avgDeficitKcal` next to `weightDeficitKcal`.
 - "מתי אגיע ליעד?" → `profile` → `eta` and `reality.status`; mention `reportGap.alert` if true.
 

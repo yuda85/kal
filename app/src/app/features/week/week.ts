@@ -34,8 +34,8 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
             <div class="muted small">לפי המשקל <span class="num">{{ fmt(v.summary.weightDeficitKcal) }}</span> · יעד <span class="num">{{ fmt(v.summary.targetDeficitKcal) }}</span></div>
           </div>
           <div class="card">
-            <div class="muted small">שינוי במגמה</div>
-            <div class="num value">{{ v.summary.trendChangeKg === null ? '—' : fmt(v.summary.trendChangeKg, 1) + ' kg' }}</div>
+            <div class="muted small">שינוי במשקל (ממוצע)</div>
+            <div class="num value">{{ v.summary.weightChangeKg === null ? '—' : fmt(v.summary.weightChangeKg, 1) + ' kg' }}</div>
             <div class="muted small">מתוכנן <span class="num">{{ fmt(v.summary.plannedChangeKg, 1) }}</span></div>
           </div>
           <div class="card">
