@@ -479,3 +479,27 @@ carbs   = (target − protein × 4 − fat × 9) / 4, ≥ 0, constraints win
 
 - Finished days on or after the goal start are flagged: red when no food was logged (the missing-day penalty), orange when steps or a real weigh-in are missing, with the missing items named ("חסר: צעדים · משקל") so the owner can send them to Claude later.
 - `read.ts week` and `month` rows carry `stepsEntered` and `weighedIn`.
+
+## 16. Weight screen by week, one weekly change everywhere (added 2026-09-30)
+
+Owner request of 2026-09-30. The 84-day daily chart was mostly empty, its axis stretched to the target, and its header number (trend) did not match the weigh-in shown on Today. This section overrides §9, §14 and §15 where they conflict.
+
+### Weekly change (domain)
+
+- Weeks run Sunday to Saturday (`weekStart`).
+- A week's weight = the mean of its real weigh-ins. Carried weights never count. A week without a weigh-in has no weight.
+- A range's weight change = mean of real weigh-ins in the range (up to today) − mean of real weigh-ins in the previous range of the same length. `null` when either has none. Weight deficit per day = −change × 7700 / range length in days.
+- `RangeSummary.trendChangeKg` becomes `weightChangeKg` with this rule, for the week and the month (month vs the previous equal-length span). Week screen label: "שינוי במשקל (ממוצע)".
+- Mid-week, this week's mean covers only the days so far; the weigh-in list shows what it is made of.
+- The trend (EWMA) keeps driving everything else: the reality check, ETA, report gap, BMR and protein.
+
+### Weight screen, top to bottom
+
+1. Hero: this week's change ("−0.5 ק״ג השבוע", green when down, neutral otherwise), with "ממוצע השבוע X · שבוע שעבר Y" under it. No weigh-in this week: "עוד לא נשקלת השבוע" and last week's change, labeled as such. First week: this week's mean only.
+2. Progress bar from `startWeightKg` to `targetWeightKg`: "התחלה X · ירדו A · נשארו B · יעד Y". Current = the mean of the latest week with a weigh-in. Above the start the bar is empty and reads "עלו A".
+3. The reality line (status, ETA) as a full-width alert. The trend number no longer appears at the top.
+4. Weekly chart: one point per week from the goal's start week, the last 12 at most; the line breaks over weeks without a weigh-in; the change above each point that has a previous week; the current week emphasized and labeled "השבוע". The axis fits the data (no plan or target line). A single week shows one point.
+5. "השקילות השבוע": one row per day from Sunday to today, the real weigh-in or a muted "לא נשקלת".
+6. The report-gap card and "+ הוספת שקילה", unchanged.
+
+The chart is inline SVG in the template (no Chart.js); `weightChart` is removed.

@@ -67,6 +67,7 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 - **Target card (Today, "איך נבנה היעד היום"):** an equation row read right to left: שורף היום − גירעון (goal pace under it) (± מגבלת קלוריות when the kcal constraint moved the target) = יעד לאכילה; numbers 22px/500 (target 700), labels 12px muted, operators muted. Under a hairline, "ממה מורכבת השריפה": במנוחה (BMR), יומיום ועיכול (כולל 3,500 צעדים), steps above or below 3,500 with the count or "לא הוזנו", one line per workout; values end-aligned, signed with a real minus, zero muted. Monochrome: typography carries the hierarchy. Numbers are rounded so they add up on screen. A screen-reader sentence carries the equation.
 - **Week rows:** finished days get a 3px row edge and a text flag: red (`--danger`, `--danger-bg/fg`) "לא הוזן אוכל · נחשב 3,200"; orange (`--missing`, `--missing-bg/fg`) "חסר: צעדים · משקל". Today and days before the goal start are never flagged.
 - **Month calendar:** 7-column grid from Sunday; each cell shows the day number and the workout type as text; background is supplementary (deficit / surplus / not logged "!"). Deficit days get a grey `--neutral-bar` tint, never green: only the weight reality check may look like "on track". The check-in food line is neutral when the day is logged, danger when it would be penalized.
+- **Weight screen:** hero = this week's change (34px/500, `--out` when down) with "ממוצע השבוע · שבוע שעבר" under it; progress bar (bullet-bar track) start → target with "ירדו · נשארו"; reality line full width; weekly chart; "השקילות השבוע" rows (day · kg, missing day muted "לא נשקלת"); report-gap card; add button.
 - **Toast:** short, past tense ("נשמר"), 3s, above the bottom nav.
 - **Confirm dialog:** only for delete.
 
@@ -76,7 +77,7 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 |---|---|---|
 | Today | Bullet bars (CSS) | kcal `--out`, protein/carbs/fat `--in` (every macro has a target), cap marker |
 | Week | Grouped bars | in `--in` (counted intake: a penalized day shows 3,200), out `--out`; penalized day = dashed `--danger` outline + marked row |
-| Weight | Line | trend solid `--out` 2.5px · plan dashed `--primary` · target dotted `--neutral-bar` · weigh-ins dots `--neutral-bar` |
+| Weight | Weekly line (inline SVG, not Chart.js) | one point per week (mean of real weigh-ins) `--neutral-bar`, current week `--out` and larger; change above each point, 10–11px muted; no plan or target line; axis fits the data |
 
 Every chart has a text summary next to it (hero number, status chip, or KPI cards) so no information lives only in the chart.
 
