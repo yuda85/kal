@@ -11,11 +11,16 @@ const payload: Payload = {
     { op: 'recipe', id: 'fish-balls', name: 'קציצות דגים', aliases: ['קציצות'], ingredients: FISH_BALLS, yield: { units: 20 } },
     { op: 'weight', date: '2026-09-27', kg: 88.4 },
     { op: 'activity', id: 'act12345', date: '2026-09-27', steps: 9200, workouts: [{ type: 'football', durationMin: 60, kcal: 550 }] },
+    { op: 'video', id: 'vid12345', url: 'https://youtu.be/abc', title: 'חלבון בבוקר', take: 'יוגורט חלבון כל בוקר', topic: 'protein' },
   ],
 };
 
 describe('planWrites', () => {
   const w = planWrites(payload, { source: 'link', time: '14:00' });
+
+  it('passes videos through without the op field', () => {
+    expect(w.videos).toEqual([{ id: 'vid12345', url: 'https://youtu.be/abc', title: 'חלבון בבוקר', take: 'יוגורט חלבון כל בוקר', topic: 'protein' }]);
+  });
 
   it('maps an add op to an entry with null for unknown macros', () => {
     expect(w.entries[0]).toEqual({ id: 'abcd1234', date: '2026-09-27', time: '13:10', name: 'שקשוקה', kcal: 420, protein: 22, carbs: null, fat: null, source: 'link' });

@@ -1,6 +1,7 @@
 import { isValidDate, localDate, localTime } from './dates.ts';
 import { computeRecipe, portion } from './recipe.ts';
 import { round1 } from './round.ts';
+import { TIP_TOPICS, type TipTopic } from './tips-data.ts';
 import type { Ingredient, Recipe, RecipeYield, Workout } from './types.ts';
 
 export const LINK_VERSION = 1;
@@ -42,7 +43,17 @@ export interface ActivityOp {
   workouts?: Workout[];
 }
 
-export type Op = AddOp | RecipeOp | WeightOp | ActivityOp;
+export interface VideoOp {
+  op: 'video';
+  id: string;
+  url: string;
+  title: string;
+  /** The owner's takeaway, in their words. */
+  take: string;
+  topic: TipTopic;
+}
+
+export type Op = AddOp | RecipeOp | WeightOp | ActivityOp | VideoOp;
 
 export interface Payload {
   v: typeof LINK_VERSION;
@@ -135,6 +146,7 @@ const KEYS = {
   recipe: ['op', 'id', 'name', 'aliases', 'ingredients', 'yield'],
   weight: ['op', 'date', 'kg'],
   activity: ['op', 'id', 'date', 'steps', 'workouts'],
+  video: ['op', 'id', 'url', 'title', 'take', 'topic'],
   ingredient: ['name', 'grams', 'per100'],
   per100: ['kcal', 'protein', 'carbs', 'fat'],
   yield: ['units', 'unitName', 'cookedGrams'],
@@ -171,6 +183,14 @@ function checkName(o: Obj, key: string, path: string, errors: string[], maxLengt
   if (v === undefined && optional) return;
   if (typeof v !== 'string' || v.trim().length === 0 || [...v].length > maxLength) {
     errors.push(`${path}.${key} must be a non-empty name up to ${maxLength} characters`);
+  }
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
   }
 }
 
@@ -266,6 +286,14 @@ function checkOp(op: unknown, path: string, errors: string[]): void {
       }
       if (op.steps === undefined && op.workouts === undefined) errors.push(`${path} needs steps or workouts`);
       break;
+    case 'video':
+      checkKeys(op, KEYS.video, path, errors);
+      checkPattern(op, 'id', ID, path, errors);
+      if (typeof op.url !== 'string' || op.url.length > 500 || !isHttpsUrl(op.url)) errors.push(`${path}.url must be an https link up to 500 characters`);
+      checkName(op, 'title', path, errors, 80);
+      checkName(op, 'take', path, errors, 280);
+      if (!(TIP_TOPICS as readonly unknown[]).includes(op.topic)) errors.push(`${path}.topic must be one of ${TIP_TOPICS.join(', ')}`);
+      break;
     default:
       errors.push(`${path}.op is unknown: ${String(op.op)}`);
   }
@@ -301,6 +329,7 @@ export function fillDefaults(draft: unknown, now: Date, newId: () => string): un
       if (!isObj(op)) return op;
       if (op.op === 'add') return { id: newId(), date, time, ...op };
       if (op.op === 'activity') return { id: newId(), date, ...op };
+      if (op.op === 'video') return { id: newId(), ...op };
       if (op.op === 'weight') return { date, ...op };
       return op;
     }),

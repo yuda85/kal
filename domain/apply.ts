@@ -1,4 +1,4 @@
-import type { AddOp, Payload, RecipeOp } from './link.ts';
+import type { AddOp, Payload, RecipeOp, VideoOp } from './link.ts';
 import { computeRecipe, portion } from './recipe.ts';
 import { round1 } from './round.ts';
 import type { Day, Entry, Per100, Recipe, WeighIn, Workout } from './types.ts';
@@ -18,12 +18,15 @@ export interface ActivityWrite {
 
 export const CHECKIN_LINK_ID = 'checkin';
 
+export type Video = Omit<VideoOp, 'op'>;
+
 export interface PlannedWrites {
   entries: Entry[];
   recipes: StoredRecipe[];
   weights: WeighIn[];
   activities: ActivityWrite[];
   checkIns: string[];
+  videos: Video[];
 }
 
 export function toEntry(op: AddOp, source: 'link' | 'form'): Entry {
@@ -49,7 +52,7 @@ function toStoredRecipe(op: RecipeOp): StoredRecipe {
 }
 
 export function planWrites(payload: Payload, opts: { source: 'link' | 'form'; time: string }): PlannedWrites {
-  const out: PlannedWrites = { entries: [], recipes: [], weights: [], activities: [], checkIns: [] };
+  const out: PlannedWrites = { entries: [], recipes: [], weights: [], activities: [], checkIns: [], videos: [] };
   for (const op of payload.ops) {
     switch (op.op) {
       case 'add':
@@ -71,6 +74,11 @@ export function planWrites(payload: Payload, opts: { source: 'link' | 'form'; ti
         // Only a day summary with steps closes the day; a workout logged mid-day keeps the evening prompt.
         if (op.id === CHECKIN_LINK_ID && op.steps !== undefined) out.checkIns.push(op.date);
         break;
+      case 'video': {
+        const { op: _, ...video } = op;
+        out.videos.push(video);
+        break;
+      }
     }
   }
   return out;

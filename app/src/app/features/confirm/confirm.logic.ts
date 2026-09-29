@@ -1,4 +1,4 @@
-import { computeRecipe, type Op, type Recipe } from '../../domain';
+import { computeRecipe, TOPIC_LABEL, type Op, type Recipe } from '../../domain';
 import { fmt, shortDate } from '../../shared/format';
 
 export function describeOp(op: Op, recipes: Recipe[]): string {
@@ -16,6 +16,8 @@ export function describeOp(op: Op, recipes: Recipe[]): string {
       for (const w of op.workouts ?? []) parts.push(`${w.type} ${fmt(w.kcal)} קל׳${w.durationMin ? ` (${fmt(w.durationMin)} דק׳)` : ''}`);
       return `פעילות (${shortDate(op.date)}): ${parts.join(' · ')}`;
     }
+    case 'video':
+      return `סרטון: ${op.title} · ${TOPIC_LABEL[op.topic]}`;
     case 'add': {
       const recipe = recipes.find((r) => r.id === op.recipeId);
       return recipe ? `${op.name} (${recipe.name})` : op.name;

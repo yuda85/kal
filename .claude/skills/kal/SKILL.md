@@ -1,6 +1,6 @@
 ---
 name: kal
-description: Log food, meal-prep recipes, weigh-ins, steps and workouts to the kal calorie tracker, and answer questions about calories and macros eaten, what is left today, and weekly progress. Use whenever the user says what they ate or drank, mentions a recipe or meal prep, gives a weight, steps or a workout, or asks how much is left or how the week looks.
+description: Log food, meal-prep recipes, weigh-ins, steps and workouts to the kal calorie tracker, and answer questions about calories and macros eaten, what is left today, and weekly progress. Use whenever the user says what they ate or drank, mentions a recipe or meal prep, gives a weight, steps or a workout, or asks how much is left or how the week looks. Also use when the user shares a reel, short or video about weight loss with their takeaway, to save it to the app's tips tab.
 ---
 
 # kal — conversational calorie logging
@@ -64,6 +64,18 @@ Collect ingredients with raw grams and the yield: number of units (with a unit n
 - A day burns BMR × 1.2 (digestion and daily movement, including 3,500 steps); steps above 3,500 and workouts add to it, fewer steps take away. A day without steps counts as 3,500. A finished day with less than 800 kcal of food counts as 3,200 (the owner's penalty rule); logging real food removes it.
 - A day without a weigh-in carries the previous weight into the trend (computed, never stored); a `weight` op for that date replaces it. `weighedIn` tells whether a day has a real weigh-in.
 - Macro targets follow the day's calorie target: protein 1.8 g per kg of trend, fat 30% of the calories, carbs the rest; the owner's constraints win.
+
+## Videos (tips tab)
+
+The owner sends a link to a reel or short and what they took from it. Save it with a `video` op; do not open or summarize the video.
+
+```json
+{"op":"video","url":"https://www.instagram.com/reel/…","title":"למה רעבים בערב","take":"לסגור מטבח ב-21:00","topic":"hunger"}
+```
+
+- `title`: a short Hebrew title you write from what the owner said (up to 80 characters). `take`: the owner's takeaway in their words, lightly cleaned up (up to 280). `url`: the https link as sent, without tracking parameters when they are obvious (`?igsh=…`, `?si=…`).
+- `topic`, one of: `tracking` מעקב ורישום, `protein` חלבון, `hunger` רעב ושובע, `water` מים, `fiber` סיבים וירקות, `fat` שומן ושמנים, `carbs` פחמימות, `sleep` שינה ולחץ, `social` אירועים ובחוץ, `movement` תנועה, `mindset` ראש.
+- No take given → ask for one line: the take is the point of the list.
 
 ## Questions (no link)
 

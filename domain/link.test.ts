@@ -119,6 +119,28 @@ describe('validatePayload', () => {
   });
 });
 
+describe('video op', () => {
+  const video = { op: 'video', id: 'vid12345', url: 'https://www.instagram.com/reel/abc/', title: 'למה רעבים בערב', take: 'לסגור מטבח ב-21:00', topic: 'hunger' } as const;
+
+  it('accepts a video with an https url, a title, a take and a topic', () => {
+    expect(validatePayload({ v: 1, ops: [video] }).ops[0]).toEqual(video);
+  });
+
+  it('rejects a non-https url, an unknown topic, a long take and unknown fields', () => {
+    expect(() => validatePayload({ v: 1, ops: [{ ...video, url: 'http://instagram.com/reel/abc' }] })).toThrow(/url/);
+    expect(() => validatePayload({ v: 1, ops: [{ ...video, url: 'javascript:alert(1)' }] })).toThrow(/url/);
+    expect(() => validatePayload({ v: 1, ops: [{ ...video, topic: 'pizza' }] })).toThrow(/topic/);
+    expect(() => validatePayload({ v: 1, ops: [{ ...video, take: 'א'.repeat(281) }] })).toThrow(/take/);
+    expect(() => validatePayload({ v: 1, ops: [{ ...video, tip: 'x' }] })).toThrow(/tip is not a known field/);
+  });
+
+  it('gets an id from fillDefaults', () => {
+    const { id: _, ...draft } = video;
+    const p = fillDefaults({ ops: [draft] }, new Date('2026-09-30T10:00:00Z'), () => 'new12345') as Payload;
+    expect(p.ops[0]).toEqual({ ...video, id: 'new12345' });
+  });
+});
+
 describe('fillDefaults', () => {
   const now = new Date('2026-09-26T21:30:00Z');
 
