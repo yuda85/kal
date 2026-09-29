@@ -442,3 +442,40 @@ Changed 2026-09-28 after the owner's review. BMR plus steps left out digestion a
 - Logged deficit per day = mean(out − counted intake); weight deficit per day = −(trend change) × 7700 / days.
 - The logged deficit uses only days on or after the goal start.
 - The alert "the log shows a deficit the scale does not confirm" uses the existing report-gap rule (gap > 300 kcal/day, from goal day 21).
+
+## 15. Today clarity, planned macros, honest check-in, carried weights, missing-data marks (added 2026-09-29)
+
+Owner requests of 2026-09-29. This section overrides §4, §6, §9 and §14 where they conflict.
+
+### Today
+
+- The hero shows the remaining number with "מתוך <target>" next to it. The formula line under the hero is gone: the target card shows it.
+- Every macro bar shows value / target.
+- The target card ("איך נבנה היעד היום") replaces the waterfall. First an equation, read right to left: שורף היום − גירעון (with the goal pace under it) = יעד לאכילה, with a fourth term when the kcal constraint moved the target. Then "ממה מורכבת השריפה": resting (BMR), daily life and digestion (including the default 3,500 steps), steps above or below the default with the count (or "לא הוזנו"), and each workout. The numbers are rounded so they add up on screen.
+
+### Planned macros
+
+```
+protein = 1.8 × trend                              constraints win (unchanged)
+fat     = 30% of the day's calorie target / 9      constraints win
+carbs   = (target − protein × 4 − fat × 9) / 4, ≥ 0, constraints win
+```
+
+- Computed per day from that day's target, so a day with more steps or a workout plans more fat and carbs.
+- The wizard summary shows the plan for a typical day (default steps, no workout, inside the kcal constraint) and saves it in `computed.macroTargets` (`carbs` and `fat` are numbers now).
+
+### Carried weights
+
+- A day without a weigh-in carries the previous weight. The trend is an EWMA over one weight per day from the first weigh-in (§6's "skipping gaps" no longer holds). Carried weights are computed, never written; a real weigh-in for that day replaces the carried one.
+- Data sufficiency counts real weigh-ins only: the reality check (4 in 14 days), the ETA (14 in 28 days) and a week's trend change (two inside the week when none came before it). The scale stays the judge.
+- The check-in weight field shows the carried weight as its placeholder.
+
+### Check-in
+
+- Opens with "תהיה כנה": a prompt to log what was skipped or avoided, stating that the goal is tracking, not judging.
+- Next to it, the owner's photo, chosen once from the phone and kept only on that device (local storage), never in Firestore or the public repo.
+
+### Week
+
+- Finished days on or after the goal start are flagged: red when no food was logged (the missing-day penalty), orange when steps or a real weigh-in are missing, with the missing items named ("חסר: צעדים · משקל") so the owner can send them to Claude later.
+- `read.ts week` and `month` rows carry `stepsEntered` and `weighedIn`.

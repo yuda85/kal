@@ -25,10 +25,13 @@ Define as CSS custom properties on `:root`; dark values under `@media (prefers-c
 | `--on-primary` | `#FFFFFF` | `#052E22` | Text/icons on primary |
 | `--out` | `#1D9E75` | `#34D399` | Calories out, on-track status |
 | `--in` | `#EA580C` | `#FB923C` | Calories in, macros |
-| `--neutral-bar` | `#888780` | `#6B7280` | Macros without a target |
+| `--neutral-bar` | `#888780` | `#6B7280` | Neutral data: weigh-in dots, target line, logged-deficit tint |
 | `--danger` | `#DC2626` | `#F87171` | Over cap, missing day, destructive |
 | `--warning-bg` / `--warning-fg` | `#FEF3C7` / `#92400E` | `#422006` / `#FCD34D` | Constraint warnings |
 | `--success-bg` / `--success-fg` | `#D1FAE5` / `#047857` | `#064E3B` / `#6EE7B7` | Status chips |
+| `--danger-bg` / `--danger-fg` | `#FEE2E2` / `#B91C1C` | `#450A0A` / `#FCA5A5` | Red flag: no food logged |
+| `--missing` | `#EA580C` | `#FB923C` | Orange row edge: steps or weight not entered (non-text, ≥ 3:1) |
+| `--missing-bg` / `--missing-fg` | `#FFEDD5` / `#9A3412` | `#431407` / `#FDBA74` | Orange flag: steps or weight not entered |
 
 Status is never conveyed by color alone: always pair with text and/or an icon.
 
@@ -59,8 +62,10 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 - **KPI card:** muted 11–12px label, 16–20px/500 value, one-line context below.
 - **Entry row:** time (muted, tabular) · name · kcal (end-aligned); hairline divider.
 - **Bottom sheet (quick-add):** segmented tabs ארוחה · משקל (activity moved to the check-in sheet); macros hidden behind "+ מאקרו".
-- **Check-in sheet:** bottom sheet; steps input with the default as placeholder; workout type chips (44px); calories and optional duration inputs only when a type is chosen, with the active-vs-total hint (and a walk/run-as-steps hint for Cardio); food status line (danger when the day would be penalized); optional weight; לא עכשיו · שמירה.
-- **Waterfall (Today):** rows BMR / יומיום ועיכול / steps against the 3,500 base (minus when fewer) / workouts / deficit / target; signed values next to every bar; the steps row notes the count or "לא הוזנו".
+- **Hero (Today):** "נשאר לאכול" label; the remaining number (hero 34px/500) with "מתוך <target>" (20px/400, `--fg-muted`) on the same baseline.
+- **Check-in sheet:** bottom sheet; opens with the honesty block ("תהיה כנה": what was skipped or avoided, "המטרה היא מעקב, לא שיפוט") next to the owner's photo (96px, 9:16, chosen once from the phone, kept only on the device; a dashed "הוספת תמונה" slot until then, "החלפת תמונה" under it after); food status line (danger when the day would be penalized); steps input with the default as placeholder; workout type chips (44px); calories and optional duration inputs only when a type is chosen, with the active-vs-total hint (and a walk/run-as-steps hint for Cardio); optional weight with the carried weight as placeholder; לא עכשיו · שמירה.
+- **Target card (Today, "איך נבנה היעד היום"):** an equation row read right to left: שורף היום − גירעון (goal pace under it) (± מגבלת קלוריות when the kcal constraint moved the target) = יעד לאכילה; numbers 22px/500 (target 700), labels 12px muted, operators muted. Under a hairline, "ממה מורכבת השריפה": במנוחה (BMR), יומיום ועיכול (כולל 3,500 צעדים), steps above or below 3,500 with the count or "לא הוזנו", one line per workout; values end-aligned, signed with a real minus, zero muted. Monochrome: typography carries the hierarchy. Numbers are rounded so they add up on screen. A screen-reader sentence carries the equation.
+- **Week rows:** finished days get a 3px row edge and a text flag: red (`--danger`, `--danger-bg/fg`) "לא הוזן אוכל · נחשב 3,200"; orange (`--missing`, `--missing-bg/fg`) "חסר: צעדים · משקל". Today and days before the goal start are never flagged.
 - **Month calendar:** 7-column grid from Sunday; each cell shows the day number and the workout type as text; background is supplementary (deficit / surplus / not logged "!"). Deficit days get a grey `--neutral-bar` tint, never green: only the weight reality check may look like "on track". The check-in food line is neutral when the day is logged, danger when it would be penalized.
 - **Toast:** short, past tense ("נשמר"), 3s, above the bottom nav.
 - **Confirm dialog:** only for delete.
@@ -69,7 +74,7 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 
 | Screen | Chart | Encoding |
 |---|---|---|
-| Today | Bullet bars (CSS) | kcal `--out`, protein/carbs/fat `--in` or `--neutral-bar`, cap marker |
+| Today | Bullet bars (CSS) | kcal `--out`, protein/carbs/fat `--in` (every macro has a target), cap marker |
 | Week | Grouped bars | in `--in` (counted intake: a penalized day shows 3,200), out `--out`; penalized day = dashed `--danger` outline + marked row |
 | Weight | Line | trend solid `--out` 2.5px · plan dashed `--primary` · target dotted `--neutral-bar` · weigh-ins dots `--neutral-bar` |
 
