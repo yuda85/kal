@@ -503,3 +503,53 @@ Owner request of 2026-09-30. The 84-day daily chart was mostly empty, its axis s
 6. The report-gap card and "+ הוספת שקילה", unchanged.
 
 The chart is inline SVG in the template (no Chart.js); `weightChart` is removed.
+
+## 17. Tips tab, saved videos, daily tip (added 2026-09-30)
+
+Owner request of 2026-09-30: one place for bite-size know-how that makes the cut easier and keeps motivation up. Decided with the owner: vertical cards, stars pin a tip to the top, no reordering, videos added by Claude through a confirm-link with the owner's take, a daily tip in a blocking dialog on the first open of the day, no push notifications. Decided by Claude while the owner was away (review in the morning): the rest of this section.
+
+### Content
+
+- 50 tips written by Claude, stored in the repo (`domain/tips-data.ts`), each `{ id, topic, title, body, action? }`: a title of up to ~8 words, a body of 1–2 sentences, and an optional one-line "what to do today". New or changed tips are a code change.
+- 11 topics, in this order: `tracking` מעקב ורישום · `protein` חלבון · `hunger` רעב ושובע · `water` מים · `fiber` סיבים וירקות · `fat` שומן ושמנים · `carbs` פחמימות · `sleep` שינה ולחץ · `social` אירועים ובחוץ · `movement` תנועה · `mindset` ראש.
+- Tips are general, practical and conservative; no supplements, no medical claims.
+
+### Data
+
+```
+users/{uid}/meta/tips      { starred: string[], rotation: number, lastDate?: string, lastTipId?: string, recent: string[] }
+users/{uid}/videos/{id}    { url, title, take, topic, addedAt }
+```
+
+- `meta/tips` is written by the app (star, daily tip closed). A missing document means no stars, rotation 0, never shown.
+- Videos are written only through a confirm-link, like everything Claude sends.
+- Rules unchanged: `users/{uid}/**` is already public-read, owner-write.
+
+### Link op `video`
+
+`{ op: 'video', id, url, title, take, topic }` — `id` 4–32 `[a-z0-9]` (filled by `link.ts`), `url` https up to 500 characters, `title` up to 80, `take` (the owner's takeaway, in their words) up to 280, `topic` one of the 11. The confirm screen shows "סרטון: <title> · <topic>". The owner sends Claude a link and their take; Claude writes a short title, picks the topic and builds the link. Claude does not open or summarize the video.
+
+### Daily tip
+
+- On the first open of a day (`meta/tips.lastDate` ≠ today, after data loaded, not on the confirm screen), a dialog shows one tip and must be closed with "הבנתי". It also has a star toggle. Closing writes `lastDate = today`, `lastTipId`, and `recent` (the last 14 tip ids). Leaving the app without closing shows the same tip again next open.
+- The evening check-in never opens on top of it; it waits until the tip is closed.
+- Which tip: the rotation by default — `TIPS[rotation % 50]`, and closing a rotation tip advances `rotation`. A strong reason from yesterday overrides it, checked in this order on yesterday's finished day (on or after the goal start):
+
+| Reason | Rule | Topic | Line shown |
+|---|---|---|---|
+| not logged | the day was penalized (`imputed`) | tracking | אתמול הרישום לא הושלם |
+| calories over | counted intake > target + 300 | hunger | אתמול: 2,750 מתוך 2,341 |
+| fat over | fat > 120% of its target | fat | אתמול: שומן 98g מתוך 78g |
+| carbs over | carbs > 120% of its target | carbs | אתמול: פחמימות 310g מתוך 244g |
+| protein low | protein < 70% of its target | protein | אתמול: חלבון 100g מתוך 166g |
+
+- A reason tip is the first tip of that topic not in `recent` (or the topic's first tip when all are recent), and does not advance the rotation.
+
+### Tips tab
+
+- Fifth bottom tab "טיפים" (lightbulb icon), after מתכונים. Route `/tips`.
+- A row of filter chips (scrolls sideways inside itself): הכל · שמורים · סרטונים · then the 11 topics.
+- "הכל": starred tips first under "שמורים", then each topic as a section with its tips followed by its videos. Topics with nothing to show are hidden.
+- Tip card: topic label, title, body, the action line (accent colour, with an arrow icon), a star button (44px, `aria-pressed`, "סמן כשמור" / "הסר משמורים").
+- Video card: a play icon tile, title, platform ("Instagram", "YouTube", "TikTok" or the host) and date, the owner's take as a quote, "צפייה" opens the link in a new tab, and a delete button with a confirm dialog. Videos have no stars.
+- Empty video state: "שלח לי בצ'אט קישור לסרטון והטייק שלך, ואני אוסיף אותו כאן."

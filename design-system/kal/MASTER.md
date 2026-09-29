@@ -32,6 +32,7 @@ Define as CSS custom properties on `:root`; dark values under `@media (prefers-c
 | `--danger-bg` / `--danger-fg` | `#FEE2E2` / `#B91C1C` | `#450A0A` / `#FCA5A5` | Red flag: no food logged |
 | `--missing` | `#EA580C` | `#FB923C` | Orange row edge: steps or weight not entered (non-text, ≥ 3:1) |
 | `--missing-bg` / `--missing-fg` | `#FFEDD5` / `#9A3412` | `#431407` / `#FDBA74` | Orange flag: steps or weight not entered |
+| `--star` | `#B45309` | `#FBBF24` | Filled star on a saved tip (paired with `aria-pressed` and label) |
 
 Status is never conveyed by color alone: always pair with text and/or an icon.
 
@@ -54,7 +55,7 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 - CSS logical properties only (`margin-inline-start`, `padding-inline-end`, `inset-inline-end`).
 - FAB sits at the inline end (bottom-left in RTL).
 - Chart time axes stay left-to-right (chart convention); legends and tooltips are RTL.
-- Bottom navigation: 4 tabs (היום, שבוע, משקל, מתכונים), icon + label, active tab uses `--out`.
+- Bottom navigation: 5 tabs (היום, שבוע, משקל, מתכונים, טיפים), icon + label, active tab uses `--out`.
 
 ## Components
 
@@ -68,6 +69,10 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 - **Week rows:** finished days get a 3px row edge and a text flag: red (`--danger`, `--danger-bg/fg`) "לא הוזן אוכל · נחשב 3,200"; orange (`--missing`, `--missing-bg/fg`) "חסר: צעדים · משקל". Today and days before the goal start are never flagged.
 - **Month calendar:** 7-column grid from Sunday; each cell shows the day number and the workout type as text; background is supplementary (deficit / surplus / not logged "!"). Deficit days get a grey `--neutral-bar` tint, never green: only the weight reality check may look like "on track". The check-in food line is neutral when the day is logged, danger when it would be penalized.
 - **Weight screen:** hero = this week's change (34px/500, `--out` when down) with "ממוצע השבוע · שבוע שעבר" under it; progress bar (bullet-bar track) start → target with "ירדו · נשארו"; reality line full width; weekly chart; "השקילות השבוע" rows (day · kg, missing day muted "לא נשקלת"); report-gap card; add button.
+- **Tip card:** card with a muted 12px topic label, title 16px/600, body 15px/400 line-height 1.6 (`--fg`), optional action line 14px/500 `--out` with an arrow icon; star button 44×44 at the inline end (outline `--fg-muted`, filled `--star` when starred, `aria-pressed`).
+- **Video card:** like a tip card; a 48×64 play tile (`--border` background, play icon), title, "Instagram · 28.9" muted, the take as a quote with a 3px `--out` inline-start border, "צפייה" (opens a new tab) and a delete icon button (confirm dialog).
+- **Filter chips:** 36px high (44px hit area), pill, `--border` outline; active chip `--primary` fill with `--on-primary` text; one row that scrolls sideways inside itself.
+- **Daily tip dialog:** `role="dialog"`, `aria-modal`, 60% black scrim, centred card (radius 20px), "טיפ היום · <topic>", the reason line as a `--missing-bg/fg` pill when there is one, title 20px/600, body, action line, then star toggle and a primary "הבנתי" (focused on open). No close on scrim tap or Escape: it is closed with "הבנתי".
 - **Toast:** short, past tense ("נשמר"), 3s, above the bottom nav.
 - **Confirm dialog:** only for delete.
 
