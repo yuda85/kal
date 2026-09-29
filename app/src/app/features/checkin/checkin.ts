@@ -1,16 +1,17 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { LucideX } from '@lucide/angular';
+import { LucideImagePlus, LucideX } from '@lucide/angular';
 import { KalState } from '../../core/kal-state';
 import { KalRepository } from '../../core/repository';
 import { Toast } from '../../core/toast';
-import { settingsOf, WORKOUT_TYPES } from '../../domain';
+import { settingsOf, weightOn, WORKOUT_TYPES } from '../../domain';
 import { dayLetter, fmt, num, shortDate } from '../../shared/format';
 import { checkInError, checkInWrites, initialCheckIn, type CheckInDraft } from './checkin.logic';
+import { loadPhoto, savePhoto, shrinkPhoto } from './checkin-photo';
 import { CheckInService } from './checkin.service';
 
 @Component({
   selector: 'app-checkin',
-  imports: [LucideX],
+  imports: [LucideImagePlus, LucideX],
   template: `
     <div class="backdrop" (click)="later()"></div>
     <section class="sheet card stack" role="dialog" aria-modal="true" aria-label="סגירת יום">
@@ -18,6 +19,26 @@ import { CheckInService } from './checkin.service';
         <strong>סגירת יום · {{ title() }}</strong>
         <button type="button" class="icon" aria-label="סגירה" (click)="later()"><svg lucideX [size]="18"></svg></button>
       </div>
+
+      <section class="honest">
+        <div class="stack tight">
+          <strong>תהיה כנה</strong>
+          <p>יש משהו שלא הוספת היום? משהו שהתחמקת מלהוסיף? ביס בדרך, שתייה, רוטב, שמן בטיגון: גם הם נחשבים.</p>
+          <p class="muted small">המטרה היא מעקב, לא שיפוט. מספר אמיתי עוזר יותר ממספר יפה.</p>
+        </div>
+        <div class="photo">
+          @if (photo(); as src) {
+            <img [src]="src" alt="התמונה שבחרת לסגירת היום" />
+            <button type="button" class="link" (click)="picker.click()">החלפת תמונה</button>
+          } @else {
+            <button type="button" class="add-photo" (click)="picker.click()"><svg lucideImagePlus [size]="20"></svg>הוספת תמונה</button>
+          }
+          <input #picker type="file" accept="image/*" hidden (change)="choosePhoto($event)" />
+        </div>
+      </section>
+      @if (food(); as f) {
+        <p class="alert" [class.neutral]="f.ok" [class.danger]="!f.ok">{{ f.text }}</p>
+      }
 
       <label>צעדים היום
         <input name="steps" type="number" inputmode="numeric" [placeholder]="stepsHint()" [value]="draft().steps ?? ''" (input)="patch('steps', num($any($event.target).value))" />
@@ -47,12 +68,8 @@ import { CheckInService } from './checkin.service';
         }
       }
 
-      @if (food(); as f) {
-        <p class="alert" [class.neutral]="f.ok" [class.danger]="!f.ok">{{ f.text }}</p>
-      }
-
       <label>משקל (לא חובה)
-        <input name="weight" type="number" inputmode="decimal" [value]="draft().weightKg ?? ''" (input)="patch('weightKg', num($any($event.target).value))" />
+        <input name="weight" type="number" inputmode="decimal" [placeholder]="weightHint()" [value]="draft().weightKg ?? ''" (input)="patch('weightKg', num($any($event.target).value))" />
       </label>
 
       @if (error(); as e) {
@@ -76,6 +93,14 @@ import { CheckInService } from './checkin.service';
     .chip { min-height: 44px; border-radius: 999px; padding: 0 12px; font-size: 13px; }
     .chip.on { background: var(--primary); color: var(--on-primary); border-color: transparent; }
     .icon { border: none; background: none; }
+    .honest { display: flex; gap: 12px; align-items: flex-start; }
+    .honest > .stack { flex: 1; min-width: 0; }
+    .honest p { margin: 0; }
+    .photo { flex: none; width: 96px; display: grid; justify-items: center; }
+    .photo img, .add-photo { width: 96px; aspect-ratio: 9 / 16; border-radius: var(--radius); }
+    .photo img { display: block; object-fit: cover; }
+    .add-photo { display: grid; place-content: center; justify-items: center; gap: 4px; padding: 4px; border-style: dashed; color: var(--fg-muted); font-size: 12px; }
+    .link { border: none; background: none; padding: 0 4px; color: var(--fg-muted); font-size: 12px; }
   `,
 })
 export class CheckIn {
@@ -94,6 +119,27 @@ export class CheckIn {
   protected readonly stepsHint = computed(() => {
     const profile = this.state.profile();
     return profile ? `${fmt(settingsOf(profile).defaultSteps)} אם לא תזין` : '';
+  });
+  protected readonly photo = signal(loadPhoto());
+
+  protected async choosePhoto(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const dataUrl = await shrinkPhoto(file);
+      this.photo.set(dataUrl);
+      if (!savePhoto(dataUrl)) this.toast.show('התמונה לא נשמרה במכשיר');
+    } catch {
+      this.toast.show('לא הצלחתי לפתוח את התמונה');
+    }
+  }
+
+  /** A day without a weigh-in counts the previous one; say which. */
+  protected readonly weightHint = computed(() => {
+    const w = weightOn(this.state.weighIns(), this.date);
+    return w?.carried ? `${fmt(w.kg, 1)} אם לא תזין` : '';
   });
   protected readonly food = computed(() => {
     const s = this.state.todaySummary();

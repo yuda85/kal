@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dailyDeficit, macroTargets, makeGoal } from './targets.ts';
+import { dailyDeficit, dailyTarget, macroTargets, makeGoal, typicalTarget } from './targets.ts';
 
 const base = { id: 'g1', startDate: '2026-09-01', startWeightKg: 90, targetWeightKg: 80 };
 
@@ -38,17 +38,43 @@ describe('makeGoal', () => {
   });
 });
 
+describe('dailyTarget and typicalTarget', () => {
+  it('subtracts the deficit and keeps the kcal constraint', () => {
+    expect(dailyTarget(2500, 500, {})).toBe(2000);
+    expect(dailyTarget(2500, 500, { kcal: { min: 2100 } })).toBe(2100);
+    expect(dailyTarget(2500, 500, { kcal: { max: 1800 } })).toBe(1800);
+  });
+
+  it('burns BMR × baseFactor on a typical day', () => {
+    expect(typicalTarget(1800, 1.2, 500, {})).toBeCloseTo(1660, 10);
+    expect(typicalTarget(1800, 1.2, 500, { kcal: { min: 1700 } })).toBe(1700);
+  });
+});
+
 describe('macroTargets', () => {
-  it('targets 1.8 g protein per kg', () => {
-    expect(macroTargets(85, {})).toEqual({ protein: 153, carbs: null, fat: null });
+  it('plans 1.8 g protein per kg, fat as 30% of the calories and carbs from the rest', () => {
+    const t = macroTargets(85, 2000, {});
+    expect(t.protein).toBeCloseTo(153, 10);
+    expect(t.fat).toBeCloseTo(600 / 9, 10);
+    expect(t.carbs).toBeCloseTo((2000 - 153 * 4 - 600) / 4, 10);
+    expect(t.protein * 4 + t.carbs * 4 + t.fat * 9).toBeCloseTo(2000, 10);
   });
 
   it('raises protein to the constraint min', () => {
-    expect(macroTargets(85, { protein: { min: 160 } }).protein).toBe(160);
+    expect(macroTargets(85, 2000, { protein: { min: 160 } }).protein).toBe(160);
   });
 
-  it('caps protein at the constraint max', () => {
-    expect(macroTargets(85, { protein: { max: 120 } }).protein).toBe(120);
-    expect(macroTargets(60, { protein: { max: 120 } }).protein).toBeCloseTo(108, 10);
+  it('caps protein at the constraint max and gives the calories to carbs', () => {
+    expect(macroTargets(85, 2000, { protein: { max: 120 } }).protein).toBe(120);
+    expect(macroTargets(60, 2000, { protein: { max: 120 } }).protein).toBeCloseTo(108, 10);
+    expect(macroTargets(85, 2000, { protein: { max: 120 } }).carbs).toBeCloseTo((2000 - 480 - 600) / 4, 10);
+  });
+
+  it('keeps fat and carbs inside their constraints', () => {
+    expect(macroTargets(85, 2000, { fat: { max: 50 }, carbs: { max: 150 } })).toMatchObject({ fat: 50, carbs: 150 });
+  });
+
+  it('never plans negative carbs', () => {
+    expect(macroTargets(120, 900, {}).carbs).toBe(0);
   });
 });

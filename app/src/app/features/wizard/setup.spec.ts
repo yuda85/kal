@@ -23,6 +23,7 @@ describe('buildSetup', () => {
     expect(s.profile).not.toHaveProperty('activityLevel');
     expect(s.profile.settings).toEqual({ lowDayThresholdKcal: 800, defaultSteps: 3500, missingDayKcal: 3200 });
     expect(s.computed.macroTargets.protein).toBe(120);
+    expect(s.computed.macroTargets.fat).toBeCloseTo((0.3 * (1842.5 * 1.2 - 495)) / 9, 6);
     expect(s.weighIn).toEqual({ date: '2026-09-27', kg: 90, time: '10:00' });
     expect(s.previousGoalId).toBeNull();
   });
@@ -95,6 +96,10 @@ describe('initialForm and previewSetup', () => {
     expect(p.bmrKcal).toBeCloseTo(1842.5, 6);
     expect(p.deficitKcal).toBeCloseTo(495, 6);
     expect(p.typicalTargetKcal).toBeCloseTo(1842.5 * 1.2 - 495, 6);
+    // Protein capped at 120 g, fat 30% of the calories, carbs the rest
+    expect(p.macros.protein).toBe(120);
+    expect(p.macros.fat).toBeCloseTo((0.3 * p.typicalTargetKcal) / 9, 6);
+    expect(p.macros.carbs).toBeCloseTo((0.7 * p.typicalTargetKcal - 480) / 4, 6);
     // (90 − 80) / 0.45 kg per week × 7 = 155.6 → 156 days after 2026-09-27
     expect(p.etaDate).toBe('2027-03-02');
   });

@@ -29,7 +29,7 @@ export interface WeightView {
 
 export function weightView(input: { today: string; goal: Goal; weighIns: WeighIn[]; energy: DayEnergy[]; lowDayThresholdKcal: number }): WeightView {
   const { today, goal } = input;
-  const series = trendSeries(input.weighIns);
+  const series = trendSeries(input.weighIns, today);
   const dates = dateRange(addDays(today, -(WEIGHT_WINDOW_DAYS - 1)), today);
   const trendByDate = new Map(series.map((p) => [p.date, p.kg]));
   const kgByDate = new Map(input.weighIns.map((w) => [w.date, w.kg]));

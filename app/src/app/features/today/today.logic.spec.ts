@@ -1,4 +1,4 @@
-import { staleSyncHours, waterfallRows } from './today.logic';
+import { staleSyncHours, targetBreakdown } from './today.logic';
 
 const summary = (over: Record<string, unknown> = {}) =>
   ({
@@ -15,30 +15,43 @@ describe('today logic', () => {
     expect(staleSyncHours(undefined, now)).toBeNull();
   });
 
-  it('builds the target waterfall and marks defaulted steps', () => {
-    expect(waterfallRows(summary(), 3500)).toEqual([
-      { label: 'BMR', value: 1915, kind: 'base' },
-      { label: 'יומיום ועיכול', value: 383, kind: 'plus' },
-      { label: 'צעדים', value: 0, kind: 'plus', note: '3,500 · לא הוזנו' },
-      { label: 'Push', value: 350, kind: 'plus' },
-      { label: 'גירעון', value: -1009, kind: 'minus' },
-      { label: 'יעד', value: 1639, kind: 'total' },
+  it('builds the equation and the burn lines, marking defaulted steps', () => {
+    const b = targetBreakdown(summary(), 3500, 0.92);
+    expect(b).toMatchObject({ burn: 2648, deficit: 1009, clamp: 0, target: 1639, pace: '0.92 ק״ג בשבוע' });
+    expect(b.lines).toEqual([
+      { label: 'במנוחה', note: 'BMR', kcal: 1915 },
+      { label: 'יומיום ועיכול', note: 'כולל 3,500 צעדים', kcal: 383 },
+      { label: 'צעדים', note: 'לא הוזנו', kcal: 0 },
+      { label: 'אימון', note: 'Push', kcal: 350 },
     ]);
+    expect(b.summary).toBe('יעד לאכילה 1,639: שורף היום 2,648, פחות גירעון 1,009');
   });
 
-  it('adds a constraint row when the target was clamped', () => {
-    const rows = waterfallRows(summary({ targetKcal: 1800 }), 3500);
-    expect(rows.at(-2)).toEqual({ label: 'מגבלת קלוריות', value: 161, kind: 'plus' });
+  it('adds the kcal constraint to the equation when it moved the target', () => {
+    const raised = targetBreakdown(summary({ targetKcal: 1800 }), 3500, 0.92);
+    expect(raised).toMatchObject({ burn: 2648, deficit: 1009, clamp: 161, clampLabel: 'מינימום קלוריות', target: 1800 });
+    const capped = targetBreakdown(summary({ targetKcal: 1500 }), 3500, 0.92);
+    expect(capped).toMatchObject({ clamp: -139, clampLabel: 'מקסימום קלוריות' });
+    expect(capped.burn - capped.deficit + capped.clamp).toBe(capped.target);
   });
 
-  it('shows fewer steps than the default as a minus row with the count', () => {
-    const e = { bmr: 1915, dailyLifeKcal: 383, steps: 2000, stepsSource: 'manual', stepsKcal: -49, workouts: [], workoutsKcal: 0, out: 2249 };
-    const rows = waterfallRows(summary({ expenditure: e, targetKcal: 1240 }), 3500);
-    expect(rows[2]).toEqual({ label: 'צעדים', value: -49, kind: 'minus', note: '2,000 · בסיס 3,500' });
+  it('names extra and missing steps with the count', () => {
+    const more = { bmr: 1915, dailyLifeKcal: 383, steps: 8200, stepsSource: 'manual', stepsKcal: 148, workouts: [], workoutsKcal: 0, out: 2446 };
+    expect(targetBreakdown(summary({ expenditure: more, targetKcal: 1437 }), 3500, 0.92).lines[2]).toEqual({ label: 'צעדים נוספים', note: '8,200 היום', kcal: 148 });
+    const fewer = { bmr: 1915, dailyLifeKcal: 383, steps: 2000, stepsSource: 'manual', stepsKcal: -49, workouts: [], workoutsKcal: 0, out: 2249 };
+    expect(targetBreakdown(summary({ expenditure: fewer, targetKcal: 1240 }), 3500, 0.92).lines[2]).toEqual({ label: 'פחות צעדים', note: '2,000 היום', kcal: -49 });
   });
 
-  it('never prints a signed zero for the steps row', () => {
+  it('never prints a signed zero for the steps line', () => {
     const e = { bmr: 1915, dailyLifeKcal: 383, steps: 3490, stepsSource: 'manual', stepsKcal: -0.3, workouts: [], workoutsKcal: 0, out: 2297.7 };
-    expect(Object.is(waterfallRows(summary({ expenditure: e }), 3500)[2].value, 0)).toBe(true);
+    expect(Object.is(targetBreakdown(summary({ expenditure: e, targetKcal: 2297.7 - 1009 }), 3500, 0.92).lines[2].kcal, 0)).toBe(true);
+  });
+
+  it('rounds so the numbers on screen add up', () => {
+    const e = { bmr: 1922.6, dailyLifeKcal: 384.52, steps: 3512, stepsSource: 'manual', stepsKcal: 0.4, workouts: [], workoutsKcal: 0, out: 2307.52 };
+    const b = targetBreakdown(summary({ expenditure: e, deficitKcal: 507.27, targetKcal: 2307.52 - 507.27 }), 3500, 0.46);
+    expect(b.target).toBe(1800);
+    expect(b.burn - b.deficit).toBe(b.target);
+    expect(b.lines.reduce((sum, l) => sum + l.kcal, 0)).toBe(b.burn);
   });
 });

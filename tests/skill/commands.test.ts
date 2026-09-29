@@ -23,7 +23,7 @@ describe('read commands', () => {
     expect(out.start).toBe('2026-09-27');
     expect(out.daysLogged).toBe(0);
     expect(out.missingDays).toEqual([]);
-    expect(out.days[0]).toEqual({ date: '2026-09-27', inKcal: 320, countedKcal: 320, imputed: false, outKcal: expect.any(Number), protein: 20, entries: 1, workouts: ['running'] });
+    expect(out.days[0]).toEqual({ date: '2026-09-27', inKcal: 320, countedKcal: 320, imputed: false, outKcal: expect.any(Number), protein: 20, entries: 1, workouts: ['running'], stepsEntered: true, weighedIn: true });
     expect(out.workoutsCount).toBe(1);
   });
 
@@ -32,6 +32,10 @@ describe('read commands', () => {
     expect(out.trendKg).toBe(85);
     expect(out.bmrKcal).toBeCloseTo(1792.5, 6);
     expect(out.macroTargets.protein).toBe(120);
+    // A typical day: BMR 1792.5 × 1.2 − 495
+    expect(out.typicalTargetKcal).toBeCloseTo(1792.5 * 1.2 - 495, 6);
+    expect(out.macroTargets.fat).toBeCloseTo((0.3 * out.typicalTargetKcal) / 9, 6);
+    expect(out.macroTargets.carbs).toBeCloseTo((out.typicalTargetKcal - 480 - 0.3 * out.typicalTargetKcal) / 4, 6);
     expect(out).not.toHaveProperty('status');
     expect(out.reality.status).toBe('no_data');
     expect(out.eta).toBeNull();

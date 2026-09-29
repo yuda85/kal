@@ -25,7 +25,8 @@ function mean(values: number[]): number {
 export function eta(series: TrendPoint[], goal: Goal, today: string): string | null {
   const from = addDays(today, -ETA_WINDOW_DAYS);
   const points = series.filter((p) => p.date > from && p.date <= today);
-  if (points.length < ETA_MIN_POINTS) return null;
+  // Enough real weigh-ins, not carried days.
+  if (points.filter((p) => !p.carried).length < ETA_MIN_POINTS) return null;
   const last = points[points.length - 1];
   if (last.kg <= goal.targetWeightKg) return last.date;
   const xs = points.map((p) => daysBetween(points[0].date, p.date));

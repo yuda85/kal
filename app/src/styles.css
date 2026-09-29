@@ -12,6 +12,11 @@
   --in: #EA580C;
   --neutral-bar: #888780;
   --danger: #DC2626;
+  --danger-bg: #FEE2E2;
+  --danger-fg: #B91C1C;
+  --missing: #EA580C;
+  --missing-bg: #FFEDD5;
+  --missing-fg: #9A3412;
   --warning-bg: #FEF3C7;
   --warning-fg: #92400E;
   --success-bg: #D1FAE5;
@@ -35,6 +40,11 @@
     --in: #FB923C;
     --neutral-bar: #6B7280;
     --danger: #F87171;
+    --danger-bg: #450A0A;
+    --danger-fg: #FCA5A5;
+    --missing: #FB923C;
+    --missing-bg: #431407;
+    --missing-fg: #FDBA74;
     --warning-bg: #422006;
     --warning-fg: #FCD34D;
     --success-bg: #064E3B;

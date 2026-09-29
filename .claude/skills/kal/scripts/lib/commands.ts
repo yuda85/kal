@@ -14,11 +14,13 @@ import {
   REALITY_WINDOW_DAYS,
   realityCheck,
   reportGap,
+  settingsOf,
   summarizeDay,
   summarizeMonth,
   summarizeWeek,
   trendOn,
   trendSeries,
+  typicalTarget,
   weekStart,
   type DaySummary,
 } from '../../../../../domain/index.ts';
@@ -52,14 +54,18 @@ function row(s: DaySummary) {
     protein: s.intake.protein,
     entries: s.entries.length,
     workouts: s.expenditure.workouts.map((w) => w.type),
+    stepsEntered: s.expenditure.stepsSource !== 'default',
+    weighedIn: s.weighedIn,
   };
 }
 
 async function profile(deps: Deps, today: string) {
   const from = addDays(today, -Math.max(GAP_WINDOW_DAYS, REALITY_WINDOW_DAYS));
   const d = await loadData(deps.reader, from, today);
-  const series = trendSeries(d.weighIns);
+  const series = trendSeries(d.weighIns, today);
   const trendKg = trendOn(series, today) ?? d.goal.startWeightKg;
+  const bmrKcal = bmr(d.profile, trendKg, today);
+  const typicalTargetKcal = typicalTarget(bmrKcal, settingsOf(d.profile).baseFactor, d.goal.dailyDeficitKcal, d.profile.constraints);
   const plannedKg = plannedWeight(d.goal, today);
   const energy = dateRange(from, addDays(today, -1)).map((date) => {
     const s = dayOf(d, date, today);
@@ -69,8 +75,9 @@ async function profile(deps: Deps, today: string) {
     profile: d.profile,
     goal: d.goal,
     trendKg,
-    bmrKcal: bmr(d.profile, trendKg, today),
-    macroTargets: macroTargets(trendKg, d.profile.constraints),
+    bmrKcal,
+    typicalTargetKcal,
+    macroTargets: macroTargets(trendKg, typicalTargetKcal, d.profile.constraints),
     plannedKg,
     eta: eta(series, d.goal, today),
     reality: realityCheck({ today, goal: d.goal, weighIns: d.weighIns, energy }),

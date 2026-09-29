@@ -55,8 +55,8 @@ import { describeOp } from './confirm.logic';
           <div class="muted small">אחרי השמירה</div>
           <app-bullet-bar label="קלוריות" [value]="p.intake.kcal" [target]="p.targetKcal" [max]="p.macros.kcal.max" tone="out" />
           <app-bullet-bar label="חלבון" unit="g" [value]="p.intake.protein" [target]="p.macros.protein.target" [max]="p.macros.protein.max" tone="in" />
-          <app-bullet-bar label="פחמימות" unit="g" [value]="p.intake.carbs" [max]="p.macros.carbs.max" />
-          <app-bullet-bar label="שומן" unit="g" [value]="p.intake.fat" [max]="p.macros.fat.max" />
+          <app-bullet-bar label="פחמימות" unit="g" [value]="p.intake.carbs" [target]="p.macros.carbs.target" [max]="p.macros.carbs.max" tone="in" />
+          <app-bullet-bar label="שומן" unit="g" [value]="p.intake.fat" [target]="p.macros.fat.target" [max]="p.macros.fat.max" tone="in" />
           @for (w of p.warnings; track $index) {
             <div class="alert warning">{{ warningText(w) }}</div>
           }

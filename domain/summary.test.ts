@@ -59,6 +59,25 @@ describe('summarizeDay', () => {
     expect(s.warnings).toEqual([]);
   });
 
+  it('plans fat and carbs from the day target', () => {
+    expect(s.macros.fat.target).toBeCloseTo((0.3 * s.targetKcal) / 9, 6);
+    expect(s.macros.carbs.target).toBeCloseTo((s.targetKcal - 120 * 4 - 0.3 * s.targetKcal) / 4, 6);
+    expect(s.macros.kcal.target).toBe(s.targetKcal);
+  });
+
+  it('knows whether the day has a real weigh-in', () => {
+    expect(s.weighedIn).toBe(true);
+    expect(summarizeDay({ date: '2026-09-28', entries, day, profile: testProfile, goal: testGoal, weighIns }).weighedIn).toBe(false);
+  });
+
+  it('uses the weight carried from the last weigh-in on days without one', () => {
+    const later = summarizeDay({ date: '2026-10-05', entries: [], profile: testProfile, goal: testGoal, weighIns: [{ date: '2026-09-20', kg: 88 }, { date, kg: 85 }] });
+    // The trend keeps moving toward the carried 85 kg: 88 → … on 09-27, then 8 more days toward 85
+    const onWeighIn = summarizeDay({ date, entries: [], profile: testProfile, goal: testGoal, weighIns: [{ date: '2026-09-20', kg: 88 }, { date, kg: 85 }] });
+    expect(later.trendKg).toBeLessThan(onWeighIn.trendKg);
+    expect(later.trendKg).toBeGreaterThan(85);
+  });
+
   it('warns when protein goes over its max', () => {
     const more = [...entries, makeEntry({ date, kcal: 800, protein: 80 })];
     const w = summarizeDay({ date, entries: more, day, profile: testProfile, goal: testGoal, weighIns });
@@ -131,7 +150,8 @@ describe('summarizeWeek', () => {
   });
 
   it('compares the trend change with the plan prorated to the elapsed days', () => {
-    expect(w.trendChangeKg).toBeCloseTo(-0.088, 6);
+    // Daily EWMA with carried days: 85.2 → 85.18 → 85.162 (09-28 carries 85) → 85.0958 → 85.03622 (09-30 carries 84.5)
+    expect(w.trendChangeKg).toBeCloseTo(-0.16378, 6);
     // Saturday 09-26 → Wednesday 09-30 is 4 days of plan
     expect(w.plannedChangeKg).toBeCloseTo((-0.45 * 4) / 7, 10);
     expect(w.targetDeficitKcal).toBe(495);
@@ -182,16 +202,16 @@ describe('summarizeWeek', () => {
     ];
     const ww = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days, profile: testProfile, goal: testGoal, weighIns: weekWeighIns });
     expect(ww.workoutsCount).toBe(2);
-    // trend −0.088 kg over the 4 days from 09-26 to 09-30
-    expect(ww.weightDeficitKcal).toBeCloseTo((0.088 * 7700) / 4, 1);
+    // trend −0.16378 kg over the 4 days from 09-26 to 09-30
+    expect(ww.weightDeficitKcal).toBeCloseTo((0.16378 * 7700) / 4, 4);
   });
 
   it('measures the weight trend from the first weigh-in when none came before the week', () => {
     const inside = [{ date: '2026-09-27', kg: 85 }, { date: '2026-09-29', kg: 84.5 }];
     const ww = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days: [], profile: testProfile, goal: testGoal, weighIns: inside });
-    // EWMA 85 → 84.95: −0.05 kg from 09-27 to 09-30 (3 days)
-    expect(ww.trendChangeKg).toBeCloseTo(-0.05, 6);
-    expect(ww.weightDeficitKcal).toBeCloseTo((0.05 * 7700) / 3, 4);
+    // EWMA 85 → 85 (09-28 carries 85) → 84.95 → 84.905 (09-30 carries 84.5): −0.095 kg from 09-27 to 09-30 (3 days)
+    expect(ww.trendChangeKg).toBeCloseTo(-0.095, 6);
+    expect(ww.weightDeficitKcal).toBeCloseTo((0.095 * 7700) / 3, 4);
   });
 
   it('reports no trend change from a single weigh-in', () => {

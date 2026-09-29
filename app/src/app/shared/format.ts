@@ -1,11 +1,16 @@
 import type { MacroKey, Warning } from '../domain';
 
-const whole = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
-const oneDecimal = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
+const formats = [0, 1, 2].map((digits) => new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }));
 
-export function fmt(n: number | null | undefined, digits: 0 | 1 = 0): string {
+export function fmt(n: number | null | undefined, digits: 0 | 1 | 2 = 0): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return '—';
-  return (digits === 1 ? oneDecimal : whole).format(n);
+  return formats[digits].format(n);
+}
+
+/** A change with its sign and a real minus: +385, −47, 0. */
+export function signed(n: number): string {
+  const r = Math.round(n);
+  return r > 0 ? `+${fmt(r)}` : r < 0 ? `−${fmt(-r)}` : '0';
 }
 
 export function num(value: string): number | null {

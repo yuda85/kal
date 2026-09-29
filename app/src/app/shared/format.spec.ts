@@ -1,4 +1,4 @@
-import { dayLetter, fmt, num, shortDate, warningText } from './format';
+import { dayLetter, fmt, num, shortDate, signed, warningText } from './format';
 
 describe('format', () => {
   it('formats numbers with separators and a dash for missing values', () => {
@@ -6,6 +6,13 @@ describe('format', () => {
     expect(fmt(18.06, 1)).toBe('18.1');
     expect(fmt(null)).toBe('—');
     expect(fmt(Number.NaN)).toBe('—');
+  });
+
+  it('signs changes with a real minus and never a signed zero', () => {
+    expect(signed(385)).toBe('+385');
+    expect(signed(-1047.4)).toBe('−1,047');
+    expect(signed(-0.3)).toBe('0');
+    expect(fmt(0.4611, 2)).toBe('0.46');
   });
 
   it('parses input values, empty as null', () => {

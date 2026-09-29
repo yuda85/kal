@@ -6,7 +6,10 @@ import { Toast } from '../../core/toast';
 import { CheckIn } from './checkin';
 import { CheckInService } from './checkin.service';
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  localStorage.clear();
+});
 
 async function open(prepare: (repo: FakeRepository) => void = () => undefined) {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -28,6 +31,35 @@ describe('CheckIn', () => {
   it('shows the food logged today', async () => {
     const { el } = await open();
     expect(el.textContent).toContain('320');
+  });
+
+  it('asks for honesty about what was not logged, without judging', async () => {
+    const { el } = await open();
+    expect(el.textContent).toContain('תהיה כנה');
+    expect(el.textContent).toContain('המטרה היא מעקב, לא שיפוט');
+  });
+
+  it('offers to add a photo until one is chosen on this device', async () => {
+    const { el } = await open();
+    expect(el.querySelector('.photo img')).toBeNull();
+    expect(el.querySelector('.add-photo')!.textContent).toContain('הוספת תמונה');
+  });
+
+  it('shows the photo saved on this device', async () => {
+    localStorage.setItem('kal.checkinPhoto', 'data:image/jpeg;base64,AAAA');
+    const { el } = await open();
+    expect(el.querySelector<HTMLImageElement>('.photo img')!.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
+    expect(el.textContent).toContain('החלפת תמונה');
+  });
+
+  it('shows the carried weight a day without a weigh-in will count', async () => {
+    const { el } = await open((repo) => (repo.weighIns = [{ date: '2026-09-25', kg: 85.4 }]));
+    expect(el.querySelector<HTMLInputElement>('input[name=weight]')!.placeholder).toBe('85.4 אם לא תזין');
+  });
+
+  it('shows no weight hint once today is weighed', async () => {
+    const { el } = await open();
+    expect(el.querySelector<HTMLInputElement>('input[name=weight]')!.placeholder).toBe('');
   });
 
   it('saves without waiting, closes, and does not reopen today', async () => {

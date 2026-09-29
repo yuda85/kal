@@ -24,7 +24,7 @@ export function realityCheck(input: { today: string; goal: Goal; weighIns: Weigh
   const to = input.today;
   const from = addDays(to, -(REALITY_WINDOW_DAYS - 1));
   const weighInCount = input.weighIns.filter((w) => w.date >= from && w.date <= to).length;
-  const series = trendSeries(input.weighIns);
+  const series = trendSeries(input.weighIns, to);
   const before = trendOn(series, addDays(from, -1));
   const firstInWindow = series.find((p) => p.date >= from && p.date <= to);
   const startKg = before ?? firstInWindow?.kg ?? null;

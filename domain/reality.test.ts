@@ -14,6 +14,14 @@ describe('realityCheck', () => {
     expect(r.weighInCount).toBe(2);
   });
 
+  it('does not count carried days as weigh-ins', () => {
+    // A month of steady loss that ended three weeks ago: the carried days keep the trend going but prove nothing.
+    const old = series(30, 90, -0.07).map((w) => ({ ...w, date: addDays(w.date, -21) }));
+    const r = realityCheck({ today, goal: testGoal, weighIns: old, energy: [] });
+    expect(r.weighInCount).toBe(0);
+    expect(r.status).toBe('no_data');
+  });
+
   it('says gaining when the trend rose', () => {
     expect(realityCheck({ today, goal: testGoal, weighIns: series(30, 88, 0.05), energy: [] }).status).toBe('gaining');
   });

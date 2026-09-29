@@ -6,7 +6,9 @@ import { addDays, reportGap, settingsOf, trendSeries } from '../../domain';
 import { fontsReady, weekChart } from '../../shared/charts';
 import { fmt, shortDate } from '../../shared/format';
 import { realityLine } from '../../shared/reality-line';
-import { canGoBack, canGoBackMonth, monthView, shiftMonth, weekView, type WeekView } from './week.logic';
+import { canGoBack, canGoBackMonth, monthView, shiftMonth, weekView, type MissingInput, type WeekView } from './week.logic';
+
+const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weight: 'משקל' };
 
 @Component({
   selector: 'app-week',
@@ -58,11 +60,12 @@ import { canGoBack, canGoBackMonth, monthView, shiftMonth, weekView, type WeekVi
 
         <ul class="rows">
           @for (r of v.rows; track r.date) {
-            <li class="row" [class.imputed]="r.imputed">
-              <span>{{ r.label }}</span>
-              <span>
+            <li class="row" [class.imputed]="r.imputed" [class.gap]="r.missing.length > 0">
+              <span class="day">{{ r.label }}</span>
+              <span class="mid">
                 @for (t of r.types; track $index) { <span class="tag">{{ t }}</span> }
-                @if (r.imputed) { <span class="small">לא הוזן · נחשב <span class="num">{{ fmt(missingKcal()) }}</span></span> }
+                @if (r.imputed) { <span class="flag food">לא הוזן אוכל · נחשב <span class="num">{{ fmt(missingKcal()) }}</span></span> }
+                @if (r.missing.length > 0) { <span class="flag input">חסר: {{ missingText(r.missing) }}</span> }
               </span>
               <span class="num">{{ r.net > 0 ? '+' : '' }}{{ fmt(r.net) }}</span>
             </li>
@@ -111,8 +114,15 @@ import { canGoBack, canGoBackMonth, monthView, shiftMonth, weekView, type WeekVi
     .value { font-size: 20px; font-weight: 500; }
     .chart { position: relative; height: 200px; margin-block: 12px; }
     .rows { list-style: none; margin: 0; padding: 0; }
-    .rows li { padding-block: 6px; border-block-end: 1px solid var(--border); font-size: 13px; }
-    .rows li.imputed { color: var(--danger); }
+    .rows li { padding-block: 6px; padding-inline-start: 8px; border-block-end: 1px solid var(--border); border-inline-start: 3px solid transparent; font-size: 13px; }
+    /* Red: no food logged. Orange: steps or a weigh-in missing. Always with text, never color alone. */
+    .rows li.gap { border-inline-start-color: var(--missing); }
+    .rows li.imputed { color: var(--danger); border-inline-start-color: var(--danger); }
+    .day { flex: none; }
+    .mid { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; }
+    .flag { font-size: 12px; border-radius: 999px; padding: 0 8px; }
+    .flag.food { color: var(--danger-fg); background: var(--danger-bg); }
+    .flag.input { color: var(--missing-fg); background: var(--missing-bg); }
     .tag { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; font-size: 11px; margin-inline-end: 4px; }
     .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
     .cal.head { font-size: 11px; color: var(--fg-muted); text-align: center; margin-block-end: 3px; }
@@ -143,6 +153,10 @@ export class Week {
   private drawToken = 0;
 
   protected readonly reality = computed(() => realityLine(this.state.reality()));
+  protected missingText(missing: MissingInput[]): string {
+    return missing.map((m) => MISSING_LABEL[m]).join(' · ');
+  }
+
   protected readonly missingKcal = computed(() => {
     const profile = this.state.profile();
     return profile ? settingsOf(profile).missingDayKcal : null;
@@ -172,7 +186,7 @@ export class Week {
       today: input.today,
       goal: input.goal,
       energy: this.state.recentEnergy(),
-      series: trendSeries(input.weighIns),
+      series: trendSeries(input.weighIns, input.today),
       lowDayThresholdKcal: settingsOf(input.profile).lowDayThresholdKcal,
     });
   });

@@ -2,12 +2,16 @@ import { ENTRY_WINDOW_DAYS } from '../../core/kal-state';
 import { addDays, dateRange, summarizeMonth, summarizeWeek, type DaySummary, type MonthInput, type MonthSummary, type WeekInput, type WeekSummary } from '../../domain';
 import { dayLetter, shortDate } from '../../shared/format';
 
+export type MissingInput = 'steps' | 'weight';
+
 export interface WeekRow {
   date: string;
   label: string;
   types: string[];
   net: number;
   imputed: boolean;
+  /** What a finished day still lacks (steps, a real weigh-in), so the owner can send it later. */
+  missing: MissingInput[];
 }
 
 export interface WeekView {
@@ -19,13 +23,17 @@ export interface WeekView {
   imputedIdx: number[];
 }
 
-function rowOf(d: DaySummary): WeekRow {
+function rowOf(d: DaySummary, finished: boolean): WeekRow {
+  const missing: MissingInput[] = [];
+  if (finished && d.expenditure.stepsSource === 'default') missing.push('steps');
+  if (finished && !d.weighedIn) missing.push('weight');
   return {
     date: d.date,
     label: `${dayLetter(d.date)} ${shortDate(d.date)}`,
     types: d.expenditure.workouts.map((w) => w.type),
     net: d.countedKcal - d.expenditure.out,
     imputed: d.imputed,
+    missing,
   };
 }
 
@@ -40,7 +48,7 @@ export function weekView(input: WeekInput): WeekView {
   const byDate = new Map(summary.days.map((d) => [d.date, d]));
   return {
     summary,
-    rows: summary.days.map(rowOf),
+    rows: summary.days.map((d) => rowOf(d, d.date < input.today && d.date >= input.goal.startDate)),
     labels: dates.map((d) => `${dayLetter(d)} ${shortDate(d)}`),
     inKcal: dates.map((d) => byDate.get(d)?.countedKcal ?? null),
     outKcal: dates.map((d) => byDate.get(d)?.expenditure.out ?? null),

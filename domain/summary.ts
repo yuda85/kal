@@ -3,7 +3,7 @@ import { addDays, dateRange, daysBetween, weekStart } from './dates.ts';
 import { expenditure, type Expenditure } from './expenditure.ts';
 import { plannedWeight } from './plan.ts';
 import { settingsOf } from './settings.ts';
-import { KCAL_PER_KG, macroTargets } from './targets.ts';
+import { dailyTarget, KCAL_PER_KG, macroTargets, typicalTarget } from './targets.ts';
 import { trendOn, trendSeries } from './trend.ts';
 import type { Day, Entry, Goal, Profile, Range, WeighIn } from './types.ts';
 
@@ -26,7 +26,7 @@ export interface Intake {
 
 export interface MacroLine {
   value: number;
-  target: number | null;
+  target: number;
   min: number | null;
   max: number | null;
 }
@@ -44,6 +44,8 @@ export interface DaySummary {
   warnings: Warning[];
   imputed: boolean;
   countedKcal: number;
+  /** A real weigh-in that day (a carried weight does not count). */
+  weighedIn: boolean;
 }
 
 export interface DayInput {
@@ -70,7 +72,7 @@ export function sumIntake(entries: Entry[]): Intake {
   return t;
 }
 
-function line(value: number, target: number | null, range: Range | undefined): MacroLine {
+function line(value: number, target: number, range: Range | undefined): MacroLine {
   return { value, target, min: range?.min ?? null, max: range?.max ?? null };
 }
 
@@ -78,7 +80,7 @@ export function summarizeDay(input: DayInput): DaySummary {
   const { date, profile, goal } = input;
   const settings = settingsOf(profile);
   const entries = input.entries.filter((e) => e.date === date).sort((a, b) => a.time.localeCompare(b.time));
-  const trendKg = trendOn(trendSeries(input.weighIns), date) ?? goal.startWeightKg;
+  const trendKg = trendOn(trendSeries(input.weighIns, date), date) ?? goal.startWeightKg;
   const bmrKcal = bmr(profile, trendKg, date);
   const exp = expenditure(input.day, {
     weightKg: trendKg,
@@ -88,12 +90,9 @@ export function summarizeDay(input: DayInput): DaySummary {
     baseFactor: settings.baseFactor,
   });
   const c = profile.constraints;
-  const targetKcal = Math.min(
-    Math.max(exp.out - goal.dailyDeficitKcal, c.kcal?.min ?? Number.NEGATIVE_INFINITY),
-    c.kcal?.max ?? Number.POSITIVE_INFINITY,
-  );
+  const targetKcal = dailyTarget(exp.out, goal.dailyDeficitKcal, c);
   const intake = sumIntake(entries);
-  const targets = macroTargets(trendKg, c);
+  const targets = macroTargets(trendKg, targetKcal, c);
   const macros: Record<MacroKey, MacroLine> = {
     kcal: line(intake.kcal, targetKcal, c.kcal),
     protein: line(intake.protein, targets.protein, c.protein),
@@ -106,8 +105,8 @@ export function summarizeDay(input: DayInput): DaySummary {
     if (m.max !== null && m.value > m.max) warnings.push({ code: 'over_max', macro: key, value: m.value, limit: m.max });
   }
   // Judge the goal on a typical day (default steps, no workout), not on the partial day.
-  const typicalTarget = bmrKcal * settings.baseFactor - goal.dailyDeficitKcal;
-  if (typicalTarget < 0.75 * bmrKcal) warnings.push({ code: 'below_bmr', value: typicalTarget, limit: bmrKcal });
+  const typical = typicalTarget(bmrKcal, settings.baseFactor, goal.dailyDeficitKcal, {});
+  if (typical < 0.75 * bmrKcal) warnings.push({ code: 'below_bmr', value: typical, limit: bmrKcal });
   // A finished day without enough food counts as the missing-day penalty.
   const imputed =
     input.today !== undefined && date < input.today && date >= goal.startDate && intake.kcal < settings.lowDayThresholdKcal;
@@ -122,6 +121,7 @@ export function summarizeDay(input: DayInput): DaySummary {
     remainingKcal: targetKcal - intake.kcal,
     imputed,
     countedKcal: imputed ? settings.missingDayKcal : intake.kcal,
+    weighedIn: input.weighIns.some((w) => w.date === date),
     macros,
     warnings,
   };
@@ -172,12 +172,12 @@ function summarizeRange(start: string, end: string, input: RangeInput): RangeSum
   const finished = days.filter((d) => d.date < input.today && d.date >= input.goal.startDate);
   const logged = finished.filter((d) => !d.imputed);
   const lastDate = dates.at(-1) ?? start;
-  const series = trendSeries(input.weighIns);
+  const series = trendSeries(input.weighIns, lastDate);
   const weighedInRange = input.weighIns.some((w) => w.date >= start && w.date <= lastDate);
   const trendEnd = weighedInRange ? trendOn(series, lastDate) : null;
   const before = trendOn(series, addDays(start, -1));
-  // Without a trend point before the range, measure from the first of at least two weigh-ins inside it.
-  const inRange = series.filter((p) => p.date >= start && p.date <= lastDate);
+  // Without a trend point before the range, measure from the first of at least two weigh-ins inside it (carried days do not count).
+  const inRange = series.filter((p) => !p.carried && p.date >= start && p.date <= lastDate);
   const from = before !== null ? { date: addDays(start, -1), kg: before } : inRange.length > 1 ? inRange[0] : null;
   const span = from ? daysBetween(from.date, lastDate) : 0;
   const trendChangeKg = trendEnd !== null && from !== null && span > 0 ? trendEnd - from.kg : null;

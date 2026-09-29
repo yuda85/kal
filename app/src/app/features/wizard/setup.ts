@@ -7,6 +7,8 @@ import {
   isValidDate,
   macroTargets,
   makeGoal,
+  settingsOf,
+  typicalTarget,
   type Constraints,
   type Goal,
   type PacePreset,
@@ -111,17 +113,21 @@ function paceOf(f: SetupForm): number | null {
   return f.currentWeightKg === null ? null : f.currentWeightKg * PRESET_FRACTION[f.preset];
 }
 
-export function previewSetup(f: SetupForm, today: string) {
+/** The summary step: what a typical day (default steps, no workout) looks like under this goal. */
+export function previewSetup(f: SetupForm, today: string, baseFactor = DEFAULT_BASE_FACTOR) {
   const pace = paceOf(f);
   if (f.currentWeightKg === null || f.heightCm === null || f.targetWeightKg === null || pace === null || !isValidDate(f.birthDate)) return null;
   const profile = { sex: f.sex, birthDate: f.birthDate, heightCm: f.heightCm, ...(f.bodyFatPct !== null ? { bodyFatPct: f.bodyFatPct } : {}) };
+  const constraints = toConstraints(f.constraints);
   const bmrKcal = bmr(profile, f.currentWeightKg, today);
   const deficitKcal = dailyDeficit(pace);
+  const typicalTargetKcal = typicalTarget(bmrKcal, baseFactor, deficitKcal, constraints);
   const days = Math.ceil(((f.currentWeightKg - f.targetWeightKg) / pace) * 7);
   return {
     bmrKcal,
     deficitKcal,
-    typicalTargetKcal: bmrKcal * DEFAULT_BASE_FACTOR - deficitKcal,
+    typicalTargetKcal,
+    macros: macroTargets(f.currentWeightKg, typicalTargetKcal, constraints),
     etaDate: addDays(today, days),
   };
 }
@@ -164,9 +170,12 @@ export function buildSetup(
     activeGoalId: goal.id,
     ...(ctx.previousProfile?.garminLastSyncAt ? { garminLastSyncAt: ctx.previousProfile.garminLastSyncAt } : {}),
   };
+  const bmrKcal = bmr(profile, weight, ctx.today);
+  const typical = typicalTarget(bmrKcal, settingsOf(profile).baseFactor, goal.dailyDeficitKcal, constraints);
   return {
     profile,
-    computed: { bmrKcal: bmr(profile, weight, ctx.today), macroTargets: macroTargets(weight, constraints), updatedAt: ctx.today },
+    // The macro plan of a typical day; each day's own plan follows that day's target.
+    computed: { bmrKcal, macroTargets: macroTargets(weight, typical, constraints), updatedAt: ctx.today },
     goal,
     previousGoalId: sameGoal ? null : (prev?.id ?? null),
     // Editing without touching the weight must not invent or overwrite a weigh-in.

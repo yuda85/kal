@@ -57,6 +57,29 @@ describe('week rows', () => {
   });
 });
 
+describe('missing inputs', () => {
+  const input = {
+    date: '2026-09-30',
+    today: '2026-09-30',
+    entries: [makeEntry({ date: '2026-09-27', kcal: 1800 }), makeEntry({ date: '2026-09-28', kcal: 1900 })],
+    days: [{ date: '2026-09-27', manual: { steps: 8000 } }],
+    profile: testProfile,
+    goal: testGoal,
+    weighIns: [{ date: '2026-09-27', kg: 85 }, { date: '2026-09-30', kg: 84.8 }],
+  };
+
+  it('lists the steps and weigh-in each finished day still lacks, never today', () => {
+    const v = weekView(input);
+    expect(v.rows.map((r) => r.missing)).toEqual([[], ['steps', 'weight'], ['steps', 'weight'], []]);
+    expect(v.rows[2].imputed).toBe(true);
+  });
+
+  it('asks for nothing before the goal started', () => {
+    const v = weekView({ ...input, goal: { ...testGoal, startDate: '2026-09-29' } });
+    expect(v.rows.map((r) => r.missing)).toEqual([[], [], ['steps', 'weight'], []]);
+  });
+});
+
 describe('monthView', () => {
   const v = monthView({
     month: '2026-09',

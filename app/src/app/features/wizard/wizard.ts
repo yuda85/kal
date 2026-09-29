@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { KalState } from '../../core/kal-state';
 import { KalRepository } from '../../core/repository';
-import { localTime, newLinkId } from '../../domain';
+import { FAT_KCAL_SHARE, localTime, newLinkId, PROTEIN_G_PER_KG, settingsOf } from '../../domain';
 import { fmt, num, shortDate } from '../../shared/format';
 import { buildSetup, initialForm, previewSetup, validateStep, type ConstraintFields, type SetupForm } from './setup';
 
@@ -57,6 +57,15 @@ const STEPS = ['פרופיל', 'יעד', 'מגבלות', 'סיכום'];
               <div class="row"><dt>יעד יומי טיפוסי</dt><dd class="num">{{ fmt(p.typicalTargetKcal) }}</dd></div>
               <div class="row"><dt>הגעה צפויה</dt><dd class="num">{{ shortDate(p.etaDate) }}</dd></div>
             </dl>
+            <section class="card stack tight">
+              <h2 class="muted small">מאקרו ליום טיפוסי</h2>
+              <dl class="summary">
+                <div class="row"><dt>חלבון <span class="small">· {{ proteinPerKg }} ג׳ לק״ג</span></dt><dd class="num">{{ fmt(p.macros.protein) }}g</dd></div>
+                <div class="row"><dt>שומן <span class="small">· {{ fatPct }}% מהקלוריות</span></dt><dd class="num">{{ fmt(p.macros.fat) }}g</dd></div>
+                <div class="row"><dt>פחמימות <span class="small">· מה שנשאר</span></dt><dd class="num">{{ fmt(p.macros.carbs) }}g</dd></div>
+              </dl>
+              <p class="muted small hint">ביום עם יותר צעדים או אימון היעד עולה, והתוספת הולכת לפחמימות ולשומן.</p>
+            </section>
           }
         }
       }
@@ -94,6 +103,10 @@ const STEPS = ['פרופיל', 'יעד', 'מגבלות', 'סיכום'];
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .summary dt { color: var(--fg-muted); }
     .summary dd { margin: 0; }
+    .hint { margin: 0; }
+    .tight { gap: 4px; }
+    .tight h2 { margin: 0; font-weight: 400; }
+    .tight dl { margin: 0; }
     .actions { justify-content: flex-end; }
   `,
 })
@@ -114,7 +127,12 @@ export class Wizard {
   protected readonly saveError = signal<string | null>(null);
   protected readonly permissionUid = signal<string | null>(null);
   protected readonly stepError = signal<string | null>(null);
-  protected readonly preview = computed(() => previewSetup(this.form(), this.state.today()));
+  protected readonly proteinPerKg = PROTEIN_G_PER_KG;
+  protected readonly fatPct = Math.round(FAT_KCAL_SHARE * 100);
+  protected readonly preview = computed(() => {
+    const profile = this.state.profile();
+    return previewSetup(this.form(), this.state.today(), profile ? settingsOf(profile).baseFactor : undefined);
+  });
 
   protected set<K extends keyof SetupForm>(key: K, value: SetupForm[K]): void {
     this.form.update((f) => ({ ...f, [key]: value }));

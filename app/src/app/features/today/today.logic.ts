@@ -9,30 +9,56 @@ export function staleSyncHours(lastSyncAt: string | undefined, now: Date): numbe
   return hours >= STALE_SYNC_HOURS ? hours : null;
 }
 
-export interface WaterfallRow {
+export interface BurnLine {
   label: string;
-  value: number;
-  kind: 'base' | 'plus' | 'minus' | 'total';
-  note?: string;
+  note: string;
+  kcal: number;
 }
 
-export function waterfallRows(s: DaySummary, defaultSteps: number): WaterfallRow[] {
+/** "How today's target is built": burn − deficit (± the kcal constraint) = target, and what the burn is made of. */
+export interface TargetBreakdown {
+  burn: number;
+  deficit: number;
+  pace: string;
+  /** How far the kcal constraint moved the target; 0 when it did not. */
+  clamp: number;
+  clampLabel: string;
+  target: number;
+  lines: BurnLine[];
+  /** The equation as one sentence, for screen readers. */
+  summary: string;
+}
+
+export function targetBreakdown(s: DaySummary, defaultSteps: number, paceKgPerWeek: number): TargetBreakdown {
   const e = s.expenditure;
-  const rows: WaterfallRow[] = [
-    { label: 'BMR', value: Math.round(e.bmr), kind: 'base' },
-    { label: 'יומיום ועיכול', value: Math.round(e.dailyLifeKcal), kind: 'plus' },
-  ];
+  // Rounded so the numbers on screen add up: burn − deficit + clamp = target (the hero's number), and the lines sum to burn.
+  const target = Math.round(s.targetKcal);
+  const deficit = Math.round(s.deficitKcal);
+  const clamped = Math.round(s.targetKcal - (e.out - s.deficitKcal)) !== 0;
+  const burn = clamped ? Math.round(e.out) : target + deficit;
+  const clamp = target - burn + deficit;
   const stepsKcal = Math.round(e.stepsKcal) || 0; // no signed zero
-  rows.push({
-    label: 'צעדים',
-    value: stepsKcal,
-    kind: stepsKcal < 0 ? 'minus' : 'plus',
-    note: e.stepsSource === 'default' ? `${fmt(defaultSteps)} · לא הוזנו` : `${fmt(e.steps)} · בסיס ${fmt(defaultSteps)}`,
-  });
-  for (const w of e.workouts) rows.push({ label: w.type, value: Math.round(w.kcal), kind: 'plus' });
-  rows.push({ label: 'גירעון', value: -Math.round(s.deficitKcal), kind: 'minus' });
-  const clamp = Math.round(s.targetKcal - (e.out - s.deficitKcal));
-  if (clamp !== 0) rows.push({ label: 'מגבלת קלוריות', value: clamp, kind: clamp > 0 ? 'plus' : 'minus' });
-  rows.push({ label: 'יעד', value: Math.round(s.targetKcal), kind: 'total' });
-  return rows;
+  const lines: BurnLine[] = [
+    { label: 'במנוחה', note: 'BMR', kcal: Math.round(e.bmr) },
+    { label: 'יומיום ועיכול', note: `כולל ${fmt(defaultSteps)} צעדים`, kcal: Math.round(e.dailyLifeKcal) },
+    {
+      label: stepsKcal > 0 ? 'צעדים נוספים' : stepsKcal < 0 ? 'פחות צעדים' : 'צעדים',
+      note: e.stepsSource === 'default' ? 'לא הוזנו' : `${fmt(e.steps)} היום`,
+      kcal: stepsKcal,
+    },
+    ...e.workouts.map((w) => ({ label: 'אימון', note: w.type, kcal: Math.round(w.kcal) })),
+  ];
+  lines[0].kcal += burn - lines.reduce((sum, l) => sum + l.kcal, 0); // the base absorbs the rounding
+  const clampLabel = clamp > 0 ? 'מינימום קלוריות' : 'מקסימום קלוריות';
+  const clampText = clamp === 0 ? '' : `, ${clamp > 0 ? 'ועוד' : 'פחות'} ${fmt(Math.abs(clamp))} בגלל ${clampLabel}`;
+  return {
+    burn,
+    deficit,
+    pace: `${fmt(paceKgPerWeek, 2)} ק״ג בשבוע`,
+    clamp,
+    clampLabel,
+    target,
+    lines,
+    summary: `יעד לאכילה ${fmt(target)}: שורף היום ${fmt(burn)}, פחות גירעון ${fmt(deficit)}${clampText}`,
+  };
 }

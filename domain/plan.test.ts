@@ -39,6 +39,11 @@ describe('eta', () => {
     expect(eta([], testGoal, '2026-09-27')).toBeNull();
   });
 
+  it('does not count carried days as weigh-ins', () => {
+    const sparse = series.map((p, i) => (i % 2 === 0 ? p : { ...p, carried: true }));
+    expect(eta(sparse, testGoal, '2026-09-27')).toBeNull();
+  });
+
   it('returns null when the trend is not going down', () => {
     const flat = series.map((p) => ({ ...p, kg: 85 }));
     expect(eta(flat, testGoal, '2026-09-27')).toBeNull();

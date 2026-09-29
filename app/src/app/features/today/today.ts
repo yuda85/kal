@@ -8,12 +8,12 @@ import { realityLine } from '../../shared/reality-line';
 import { shouldPromptCheckIn } from '../checkin/checkin.logic';
 import { CheckInService } from '../checkin/checkin.service';
 import { QuickAddService } from './quick-add.service';
-import { staleSyncHours, waterfallRows } from './today.logic';
-import { Waterfall } from './waterfall';
+import { TargetCard } from './target-card';
+import { staleSyncHours, targetBreakdown } from './today.logic';
 
 @Component({
   selector: 'app-today',
-  imports: [BulletBar, LucidePlus, LucideScale, LucideMoon, Waterfall],
+  imports: [BulletBar, LucidePlus, LucideScale, LucideMoon, TargetCard],
   template: `
     @if (summary(); as s) {
       <div class="row top">
@@ -26,10 +26,9 @@ import { Waterfall } from './waterfall';
 
       <section class="hero">
         <div class="muted small">נשאר לאכול</div>
-        <div class="big num" [class.over]="s.remainingKcal < 0">{{ fmt(s.remainingKcal) }}</div>
-        <div class="muted small">
-          יעד <span class="num">{{ fmt(s.targetKcal) }}</span> = יצא <span class="num">{{ fmt(s.expenditure.out) }}</span>
-          − גירעון <span class="num">{{ fmt(s.deficitKcal) }}</span>
+        <div class="big">
+          <span class="num" [class.over]="s.remainingKcal < 0">{{ fmt(s.remainingKcal) }}</span>
+          <span class="of">מתוך <span class="num">{{ fmt(s.targetKcal) }}</span></span>
         </div>
         <p class="alert reality" [class]="reality().tone">{{ reality().text }}</p>
       </section>
@@ -47,14 +46,16 @@ import { Waterfall } from './waterfall';
       <section class="bars">
         <app-bullet-bar label="קלוריות" [value]="s.intake.kcal" [target]="s.targetKcal" [max]="s.macros.kcal.max" tone="out" />
         <app-bullet-bar label="חלבון" unit="g" [value]="s.intake.protein" [target]="s.macros.protein.target" [max]="s.macros.protein.max" tone="in" />
-        <app-bullet-bar label="פחמימות" unit="g" [value]="s.intake.carbs" [max]="s.macros.carbs.max" />
-        <app-bullet-bar label="שומן" unit="g" [value]="s.intake.fat" [max]="s.macros.fat.max" />
+        <app-bullet-bar label="פחמימות" unit="g" [value]="s.intake.carbs" [target]="s.macros.carbs.target" [max]="s.macros.carbs.max" tone="in" />
+        <app-bullet-bar label="שומן" unit="g" [value]="s.intake.fat" [target]="s.macros.fat.target" [max]="s.macros.fat.max" tone="in" />
         @if (s.intake.kcalWithoutMacros > 0) {
           <p class="muted small"><span class="num">{{ fmt(s.intake.kcalWithoutMacros) }}</span> קל׳ בלי פירוט מאקרו</p>
         }
       </section>
 
-      <app-waterfall [rows]="waterfall()" />
+      @if (breakdown(); as b) {
+        <app-target-card [breakdown]="b" />
+      }
 
       <ul class="entries">
         @for (e of s.entries; track e.id) {
@@ -76,8 +77,9 @@ import { Waterfall } from './waterfall';
   styles: `
     :host { display: block; padding-block-end: 72px; } /* keep the last entry clear of the FAB */
     .hero { text-align: center; padding: 16px 0 8px; }
-    .big { font-size: 34px; font-weight: 500; color: var(--fg); }
-    .big.over { color: var(--danger); }
+    .big { display: flex; justify-content: center; align-items: baseline; gap: 8px; font-size: 34px; font-weight: 500; }
+    .big .over { color: var(--danger); }
+    .of { font-size: 20px; font-weight: 400; color: var(--fg-muted); }
     .bars { margin-block: 12px; }
     .top { margin-block: 8px; }
     .chip { min-height: 44px; border-radius: 999px; padding: 0 12px; display: inline-flex; gap: 6px; align-items: center; }
@@ -100,10 +102,11 @@ export class Today {
   protected readonly checkin = inject(CheckInService);
   protected readonly weighIn = this.state.todayWeighIn;
   protected readonly reality = computed(() => realityLine(this.state.reality()));
-  protected readonly waterfall = computed(() => {
+  protected readonly breakdown = computed(() => {
     const s = this.summary();
     const profile = this.state.profile();
-    return s && profile ? waterfallRows(s, settingsOf(profile).defaultSteps) : [];
+    const goal = this.state.goal();
+    return s && profile && goal ? targetBreakdown(s, settingsOf(profile).defaultSteps, goal.paceKgPerWeek) : null;
   });
 
   constructor() {
