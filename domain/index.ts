@@ -2,6 +2,8 @@ export * from './types.ts';
 export * from './dates.ts';
 export * from './trend.ts';
 export * from './weekly.ts';
+export * from './tips-data.ts';
+export * from './tips.ts';
 export * from './bmr.ts';
 export * from './expenditure.ts';
 export * from './targets.ts';
