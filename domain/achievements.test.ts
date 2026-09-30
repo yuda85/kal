@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fullWeek, loggingStreak, stepsAchievements, type AchievementInput } from './achievements.ts';
+import { fullWeek, loggingStreak, stepsAchievements, weightMilestones, type AchievementInput } from './achievements.ts';
 import { makeEntry, testGoal } from './testing.ts';
 
 // 2026-09-27 is a Sunday; today is Wednesday 2026-09-30.
@@ -130,5 +130,41 @@ describe('stepsAchievements', () => {
     const five = stepsAchievements({ ...base, days: [...week13, ...week20, g('2026-09-24', 12000)] });
     expect(five.bestWeek).toEqual({ date: '2026-09-20', steps: 12000 });
     expect(five.lastWeekIsBest).toBe(true);
+  });
+});
+
+describe('weightMilestones', () => {
+  // testGoal: 90 → 80 kg from 2026-09-01; the weight is the latest week's mean
+  it('has a milestone every 2 kg and the target last', () => {
+    const m = weightMilestones(testGoal, [], '2026-09-30');
+    expect(m.milestones).toEqual([2, 4, 6, 8, 10]);
+    expect([m.lostKg, m.reachedKg]).toEqual([null, null]);
+    expect(m.next).toEqual({ kg: 2, target: false, leftKg: 2 });
+  });
+
+  it('shows the last one reached and how far the next is, from the current mean', () => {
+    const m = weightMilestones(testGoal, [{ date: '2026-09-27', kg: 86.8 }, { date: '2026-09-29', kg: 86.4 }], '2026-09-30');
+    expect(m.reachedKg).toBe(2);
+    expect(m.next?.kg).toBe(4);
+    expect(m.next?.leftKg).toBeCloseTo(0.6, 10);
+  });
+
+  it('counts a milestone reached exactly, despite float subtraction', () => {
+    const goal = { ...testGoal, startWeightKg: 92.2, targetWeightKg: 83 };
+    const m = weightMilestones(goal, [{ date: '2026-09-29', kg: 88.2 }], '2026-09-30');
+    expect(m.reachedKg).toBe(4);
+    expect(m.milestones.at(-1)).toBeCloseTo(9.2, 10);
+  });
+
+  it('reaches the target', () => {
+    const m = weightMilestones(testGoal, [{ date: '2026-09-29', kg: 79.5 }], '2026-09-30');
+    expect(m.reachedTarget).toBe(true);
+    expect(m.reachedKg).toBe(10);
+    expect(m.next).toBeNull();
+  });
+
+  it('follows the mean back up', () => {
+    const m = weightMilestones(testGoal, [{ date: '2026-09-22', kg: 85.9 }, { date: '2026-09-29', kg: 86.5 }], '2026-09-30');
+    expect(m.reachedKg).toBe(2);
   });
 });

@@ -1,6 +1,7 @@
 import { addDays, dateRange, weekStart } from './dates.ts';
 import { enteredSteps } from './expenditure.ts';
 import { STEPS_GOAL } from './steps.ts';
+import { currentWeight } from './weekly.ts';
 import type { Day, Entry, Goal, WeighIn } from './types.ts';
 
 /** How many days of entries the app and `read.ts` load; a logging streak cannot see past it. */
@@ -157,5 +158,37 @@ export function stepsAchievements(input: AchievementInput): StepsAchievements {
     bestWeek,
     todayIsBest: previousDay !== null && todaySteps !== null && todaySteps > previousDay.steps,
     lastWeekIsBest: best(weekRecords.filter((r) => r.date < lastWeek)) !== null && bestWeek?.date === lastWeek,
+  };
+}
+
+export const MILESTONE_KG = 2;
+/** Weights subtract in floats (92.2 − 88.2 = 3.9999999); a milestone counts within this. */
+const EPSILON_KG = 1e-6;
+
+export interface WeightMilestones {
+  /** Start weight − current weight (§16), or null without a weigh-in. */
+  lostKg: number | null;
+  /** kg below the start weight: every 2 kg, the last one the target. */
+  milestones: number[];
+  reachedKg: number | null;
+  reachedTarget: boolean;
+  next: { kg: number; target: boolean; leftKg: number } | null;
+}
+
+export function weightMilestones(goal: Goal, weighIns: WeighIn[], today: string): WeightMilestones {
+  const span = goal.startWeightKg - goal.targetWeightKg;
+  const milestones: number[] = [];
+  for (let kg = MILESTONE_KG; kg < span - EPSILON_KG; kg += MILESTONE_KG) milestones.push(kg);
+  if (span > 0) milestones.push(span);
+  const current = currentWeight(weighIns, goal.startDate < today ? goal.startDate : today, today);
+  const lostKg = current === null ? null : goal.startWeightKg - current;
+  const reached = lostKg === null ? [] : milestones.filter((m) => lostKg + EPSILON_KG >= m);
+  const nextKg = milestones[reached.length];
+  return {
+    lostKg,
+    milestones,
+    reachedKg: reached.at(-1) ?? null,
+    reachedTarget: milestones.length > 0 && reached.length === milestones.length,
+    next: nextKg === undefined ? null : { kg: nextKg, target: nextKg === span, leftKg: nextKg - (lostKg ?? 0) },
   };
 }
