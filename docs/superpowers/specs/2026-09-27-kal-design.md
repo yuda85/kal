@@ -499,7 +499,8 @@ Owner request of 2026-09-30. The 84-day daily chart was mostly empty, its axis s
 2. Progress bar from `startWeightKg` to `targetWeightKg`: "התחלה X · ירדו A · נשארו B · יעד Y". Current = the mean of the latest week with a weigh-in. Above the start the bar is empty and reads "עלו A".
 3. The reality line (status, ETA) as a full-width alert. The trend number no longer appears at the top.
 4. Weekly chart: one point per week from the goal's start week, the last 12 at most; the line breaks over weeks without a weigh-in; the change above each point that has a previous week; the current week emphasized and labeled "השבוע". The axis fits the data (no plan or target line). A single week shows one point.
-5. "השקילות השבוע": one row per day from Sunday to today, the real weigh-in or a muted "לא נשקלת".
+   - Zoom into a week (owner request of 2026-09-30): tapping a week (the full height of its column, keyboard reachable) switches the chart to that week's days, Sunday to Saturday, each labeled by its day letter (future days of this week stay as empty slots). One point per real weigh-in with its weight above it, today emphasized, the line breaks over a day without one, and the week's mean as a dashed line. The axis fits that week's weigh-ins. The card title becomes "השבוע" or "שבוע 20.9", with a dashed legend "ממוצע X" under it (outside the chart, so it never covers a day's weight) and a "כל השבועות" button back. The choice is not saved: the screen opens on the weekly chart.
+5. "השקילות השבוע": one row per day from Sunday to today, the real weigh-in or a muted "לא נשקלת". While zoomed into an earlier week: "השקילות בשבוע 20.9" with all seven days.
 6. The report-gap card and "+ הוספת שקילה", unchanged.
 
 The chart is inline SVG in the template (no Chart.js); `weightChart` is removed.

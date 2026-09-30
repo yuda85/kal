@@ -1,10 +1,10 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { KalState } from '../../core/kal-state';
 import { dateRange } from '../../domain';
 import { dayLetter, fmt, shortDate, signedKg } from '../../shared/format';
 import { realityLine } from '../../shared/reality-line';
 import { QuickAddService } from '../today/quick-add.service';
-import { CHART_H, CHART_W, weightView } from './weight.logic';
+import { CHART_H, CHART_W, weekTitle, weightView } from './weight.logic';
 
 @Component({
   selector: 'app-weight',
@@ -39,30 +39,56 @@ import { CHART_H, CHART_W, weightView } from './weight.logic';
         {{ reality().text }}@if (v.eta && reality().tone !== 'neutral') { · צפי <span class="num">{{ shortDate(v.eta) }}</span> }
       </p>
 
-      @if (v.chart.points.length > 0) {
+      @if (v.chart.points.length > 0 || v.selectedWeek) {
         <section class="card">
-          <h3 class="small">ממוצע לשבוע</h3>
-          <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" role="img" [attr.aria-label]="chartLabel()">
-            @for (t of v.chart.ticks; track $index) {
-              <line class="grid" x1="30" [attr.x2]="W" [attr.y1]="t.y" [attr.y2]="t.y" />
-              <text class="tick" x="0" [attr.y]="t.y + 3">{{ fmt(t.kg, 1) }}</text>
-            }
-            @for (l of v.chart.lines; track $index) {
-              <polyline class="line" [attr.points]="l" />
-            }
-            @for (p of v.chart.points; track p.label) {
-              <circle [class.now]="p.current" [attr.cx]="p.x" [attr.cy]="p.y" [attr.r]="p.current ? 6 : 4" />
-              @if (p.changeKg !== null) {
-                <text class="change" [class.now]="p.current" [attr.x]="p.x" [attr.y]="p.y - 11">{{ signedKg(p.changeKg) }}</text>
+          @if (v.selectedWeek; as s) {
+            <div class="row zoom">
+              <div>
+                <h3 class="small">{{ weekTitle(s, v.thisWeek.start) }}</h3>
+                @if (v.chart.mean; as m) {
+                  <div class="legend small muted"><i></i>ממוצע <span class="num">{{ fmt(m.kg, 1) }}</span></div>
+                }
+              </div>
+              <button type="button" class="back small" (click)="week.set(null)">כל השבועות</button>
+            </div>
+          } @else {
+            <h3 class="small">ממוצע לשבוע</h3>
+          }
+          <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" role="group" [attr.aria-label]="chartLabel()">
+            <g aria-hidden="true">
+              @for (t of v.chart.ticks; track $index) {
+                <line class="grid" x1="30" [attr.x2]="W" [attr.y1]="t.y" [attr.y2]="t.y" />
+                <text class="tick" x="0" [attr.y]="t.y + 3">{{ fmt(t.kg, 1) }}</text>
               }
-              <text class="label" [class.now]="p.current" [attr.x]="p.x" [attr.y]="H - 8">{{ p.label }}</text>
+              @if (v.chart.mean; as m) {
+                <line class="mean" x1="30" [attr.x2]="W" [attr.y1]="m.y" [attr.y2]="m.y" />
+              }
+              @for (l of v.chart.lines; track $index) {
+                <polyline class="line" [attr.points]="l" />
+              }
+              @for (p of v.chart.points; track p.key) {
+                <circle [class.now]="p.current" [attr.cx]="p.x" [attr.cy]="p.y" [attr.r]="p.current ? 6 : 4" />
+                @if (p.note !== null) {
+                  <text class="change" [class.now]="p.current" [attr.x]="p.x" [attr.y]="p.y - 11">{{ p.note }}</text>
+                }
+              }
+              @for (l of v.chart.labels; track $index) {
+                <text class="label" [class.now]="l.current" [attr.x]="l.x" [attr.y]="H - 8">{{ l.text }}</text>
+              }
+            </g>
+            @if (!v.selectedWeek) {
+              @for (p of v.chart.points; track p.key) {
+                <rect class="hit" role="button" tabindex="0" [attr.x]="p.x - v.chart.slot / 2" y="0" [attr.width]="v.chart.slot" [attr.height]="H"
+                  [attr.aria-label]="weekTitle(p.key, v.thisWeek.start) + ' · ממוצע ' + fmt(p.kg, 1) + ' · הצגת ימים'"
+                  (click)="week.set(p.key)" (keydown.enter)="week.set(p.key)" (keydown.space)="$event.preventDefault(); week.set(p.key)" />
+              }
             }
           </svg>
         </section>
       }
 
       <section class="days">
-        <h3 class="small muted">השקילות השבוע</h3>
+        <h3 class="small muted">{{ v.selectedWeek && v.selectedWeek !== v.thisWeek.start ? 'השקילות ב' + weekTitle(v.selectedWeek, v.thisWeek.start) : 'השקילות השבוע' }}</h3>
         @for (d of v.days; track d.date) {
           <div class="row day" [class.missing]="d.kg === null">
             <span>{{ dayLetter(d.date) }} <span class="num">{{ shortDate(d.date) }}</span>{{ d.date === today() ? ' · היום' : '' }}</span>
@@ -112,6 +138,13 @@ import { CHART_H, CHART_W, weightView } from './weight.logic';
     .change, .label { text-anchor: middle; }
     .change.now, .label.now { fill: var(--fg); font-weight: 700; }
     .line { fill: none; stroke: var(--neutral-bar); stroke-width: 2; }
+    .mean { stroke: var(--fg-muted); stroke-dasharray: 4 3; }
+    .hit { fill: transparent; cursor: pointer; outline: none; }
+    .hit:focus-visible { stroke: var(--primary); stroke-width: 2; }
+    .zoom { margin-bottom: 6px; }
+    .zoom h3 { margin: 0; }
+    .legend i { display: inline-block; width: 14px; border-top: 1px dashed var(--fg-muted); vertical-align: middle; margin-inline-end: 4px; }
+    .back { padding: 0 12px; }
     circle { fill: var(--neutral-bar); }
     circle.now { fill: var(--out); }
     .days { margin-block: 12px; }
@@ -126,12 +159,15 @@ export class WeightPage {
   protected readonly quickAdd = inject(QuickAddService);
   protected readonly fmt = fmt;
   protected readonly signedKg = signedKg;
+  protected readonly weekTitle = weekTitle;
   protected readonly shortDate = shortDate;
   protected readonly dayLetter = dayLetter;
   protected readonly W = CHART_W;
   protected readonly H = CHART_H;
   protected readonly today = this.state.today;
   protected readonly reality = computed(() => realityLine(this.state.reality()));
+  /** Week start the chart is zoomed into; null shows every week. */
+  protected readonly week = signal<string | null>(null);
 
   protected readonly view = computed(() => {
     const profile = this.state.profile();
@@ -143,13 +179,18 @@ export class WeightPage {
       weighIns: this.state.weighIns(),
       energy: this.state.recentEnergy(),
       lowDayThresholdKcal: profile.settings.lowDayThresholdKcal,
+      week: this.week(),
     });
   });
 
   /** The chart's content as a sentence, for screen readers. */
   protected readonly chartLabel = computed(() => {
-    const points = this.view()?.chart.points ?? [];
-    return 'ממוצע משקל לשבוע: ' + points.map((p) => `${p.label} ${fmt(p.kg, 1)}`).join(', ');
+    const v = this.view();
+    if (!v) return '';
+    const points = v.chart.points.map((p) => `${p.label} ${fmt(p.kg, 1)}`).join(', ');
+    if (!v.selectedWeek) return 'ממוצע משקל לשבוע: ' + points;
+    const mean = v.chart.mean ? `, ממוצע ${fmt(v.chart.mean.kg, 1)}` : '';
+    return `${weekTitle(v.selectedWeek, v.thisWeek.start)}, משקל לפי יום: ${points}${mean}`;
   });
 
   protected readonly progressLabel = computed(() => {
