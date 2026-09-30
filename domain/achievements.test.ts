@@ -46,10 +46,10 @@ describe('loggingStreak', () => {
     expect(loggingStreak({ ...base, entries }).days).toBe(0);
   });
 
-  it('never reaches before the goal start', () => {
+  it('is not cut by a goal change: a run longer than the goal age keeps its full length', () => {
     const entries = food('2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29');
     const s = loggingStreak({ ...base, entries, goal: { ...base.goal, startDate: '2026-09-28' } });
-    expect(s.days).toBe(2);
+    expect(s.days).toBe(10);
     expect(s.capped).toBe(false);
   });
 
@@ -212,6 +212,28 @@ describe('celebrations', () => {
     const later = food('2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06');
     const run2 = earnedCelebrations(achievements({ ...base, today: '2026-10-07', entries: later }), 'g1', '2026-10-07');
     expect(dueCelebrations(run2, run1.map((c) => c.key)).map((c) => c.key)).toEqual(['streak-7-2026-09-30']);
+  });
+
+  it('does not celebrate a perfect week with only one counted day', () => {
+    // 2026-09-26 is a Saturday: the goal starts on it, so only that day counts toward the week.
+    const day = '2026-09-26';
+    const input: AchievementInput = {
+      ...base,
+      goal: { ...base.goal, startDate: day },
+      entries: food(day),
+      days: [g(day, 6000)],
+      weighIns: [{ date: day, kg: 85 }],
+    };
+    const a = achievements(input);
+    expect([a.lastWeek.perfect, a.lastWeek.of]).toEqual([true, 1]);
+    expect(earnedCelebrations(a, 'g1', input.today).filter((c) => c.kind === 'week')).toEqual([]);
+  });
+
+  it('treats a seen streak key as still seen after a break, but not after a later break', () => {
+    const earned = [{ key: 'streak-7-2026-10-05', kind: 'streak' as const, value: 7, target: false }];
+    expect(dueCelebrations(earned, ['streak-7-2026-10-01'])).toEqual(earned);
+    const earnedEarlier = [{ key: 'streak-7-2026-09-26', kind: 'streak' as const, value: 7, target: false }];
+    expect(dueCelebrations(earnedEarlier, ['streak-7-2026-10-01'])).toEqual([]);
   });
 
   it('shows two perfect weeks as two celebrations', () => {

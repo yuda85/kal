@@ -1,3 +1,4 @@
+import { kcalByDate } from './checks.ts';
 import { addDays, dateRange, weekStart } from './dates.ts';
 import { enteredSteps } from './expenditure.ts';
 import { STEPS_GOAL } from './steps.ts';
@@ -18,12 +19,6 @@ export interface AchievementInput {
   entriesFrom: string;
 }
 
-function kcalByDate(entries: Entry[]): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const e of entries) out.set(e.date, (out.get(e.date) ?? 0) + e.kcal);
-  return out;
-}
-
 export interface LoggingStreak {
   days: number;
   /** The run reaches the first loaded day: the real streak may be longer ("N+"). */
@@ -38,15 +33,13 @@ export interface LoggingStreak {
 export function loggingStreak(input: AchievementInput): LoggingStreak {
   const kcal = kcalByDate(input.entries);
   const logged = (date: string) => (kcal.get(date) ?? 0) >= input.lowDayThresholdKcal;
-  const windowFirst = input.entriesFrom > input.goal.startDate;
-  const floor = windowFirst ? input.entriesFrom : input.goal.startDate;
   const graced = new Set<string>();
   let days = 0;
   let start: string | null = null;
   let capped = false;
   for (let date = addDays(input.today, -1); ; date = addDays(date, -1)) {
-    if (date < floor) {
-      capped = windowFirst;
+    if (date < input.entriesFrom) {
+      capped = true;
       break;
     }
     if (logged(date)) {
@@ -146,9 +139,17 @@ export function stepsAchievements(input: AchievementInput): StepsAchievements {
   const lastWeek = addDays(weekStart(input.today), -7);
   const weekRecords: StepsRecord[] = [];
   if (dayRecords.length > 0) {
+    const weekly = new Map<string, { sum: number; count: number }>();
+    for (const r of dayRecords) {
+      const w = weekStart(r.date);
+      const bucket = weekly.get(w) ?? { sum: 0, count: 0 };
+      bucket.sum += r.steps;
+      bucket.count += 1;
+      weekly.set(w, bucket);
+    }
     for (let w = weekStart(dayRecords[0].date); w <= lastWeek; w = addDays(w, 7)) {
-      const inWeek = dayRecords.filter((r) => r.date >= w && r.date <= addDays(w, 6));
-      if (inWeek.length >= BEST_WEEK_MIN_DAYS) weekRecords.push({ date: w, steps: inWeek.reduce((s, r) => s + r.steps, 0) / inWeek.length });
+      const bucket = weekly.get(w);
+      if (bucket && bucket.count >= BEST_WEEK_MIN_DAYS) weekRecords.push({ date: w, steps: bucket.sum / bucket.count });
     }
   }
   const bestWeek = best(weekRecords);
@@ -239,7 +240,7 @@ export function earnedCelebrations(a: Achievements, goalId: string, today: strin
     const target = weight.reachedTarget && kg === weight.milestones.at(-1);
     add('weight', `weight-${goalId}-${target ? 'target' : kg}`, kg, target);
   }
-  for (const w of [a.lastWeek, a.thisWeek]) if (w.perfect) add('week', `week-${w.start}`, w.of);
+  for (const w of [a.lastWeek, a.thisWeek]) if (w.perfect && w.of === 7) add('week', `week-${w.start}`, w.of);
   // A capped run's start moves every day; it would celebrate again daily.
   if (logging.start !== null && !logging.capped) {
     for (const n of STREAK_MILESTONES) if (logging.days >= n) add('streak', `streak-${n}-${logging.start}`, n);
@@ -254,10 +255,24 @@ export function earnedCelebrations(a: Achievements, goalId: string, today: strin
 
 const LADDERS: CelebrationKind[] = ['weight', 'streak', 'steps-streak'];
 
+/** `<kind>-<n>-<run start>`, for the two streak kinds only. */
+const STREAK_KEY = /^(streak|steps-streak)-(\d+)-(\d{4}-\d{2}-\d{2})$/;
+
+/** A streak key with a later (or equal) run start counts as seen too: a run that breaks and restarts earlier is new. */
+function seenBySameOrLaterRun(key: string, seen: string[]): boolean {
+  const m = STREAK_KEY.exec(key);
+  if (!m) return false;
+  const [, kind, n, start] = m;
+  return seen.some((s) => {
+    const sm = STREAK_KEY.exec(s);
+    return sm !== null && sm[1] === kind && sm[2] === n && sm[3] >= start;
+  });
+}
+
 /** What to show: earned and not seen; a milestone ladder (weight, streak, steps-streak) shows only its highest. */
 export function dueCelebrations(earned: Celebration[], seen: string[]): Celebration[] {
   const seenKeys = new Set(seen);
-  const unseen = earned.filter((c) => !seenKeys.has(c.key));
+  const unseen = earned.filter((c) => !seenKeys.has(c.key) && !seenBySameOrLaterRun(c.key, seen));
   const top = new Map<CelebrationKind, Celebration>();
   for (const c of unseen) if (LADDERS.includes(c.kind)) top.set(c.kind, c);
   return unseen.filter((c) => !LADDERS.includes(c.kind) || top.get(c.kind) === c);
