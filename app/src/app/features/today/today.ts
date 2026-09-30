@@ -5,6 +5,7 @@ import { settingsOf } from '../../domain';
 import { BulletBar } from '../../shared/bullet-bar';
 import { fmt, warningText } from '../../shared/format';
 import { realityLine } from '../../shared/reality-line';
+import { CelebrationService } from '../celebrations/celebration.service';
 import { shouldPromptCheckIn } from '../checkin/checkin.logic';
 import { CheckInService } from '../checkin/checkin.service';
 import { DailyTipService } from '../tips/daily-tip.service';
@@ -111,6 +112,7 @@ export class Today {
   protected readonly staleHours = computed(() => staleSyncHours(this.state.profile()?.garminLastSyncAt, this.state.now()));
   protected readonly checkin = inject(CheckInService);
   private readonly dailyTip = inject(DailyTipService);
+  private readonly celebrate = inject(CelebrationService);
   protected readonly weighIn = this.state.todayWeighIn;
   protected readonly streak = computed(() => {
     const a = this.state.achievements();
@@ -131,7 +133,7 @@ export class Today {
       if (this.checkin.open()) {
         // A sheet that opened by itself goes away once the day turns out to be checked in (e.g. on another device).
         if (this.checkin.auto() && day?.checkedInAt) this.checkin.close();
-      } else if (!this.dailyTip.pick() && shouldPromptCheckIn(this.state.now(), day, this.checkin.dismissedFor() === today)) {
+      } else if (!this.dailyTip.pick() && this.celebrate.due().length === 0 && shouldPromptCheckIn(this.state.now(), day, this.checkin.dismissedFor() === today)) {
         this.checkin.show(true);
       }
     });

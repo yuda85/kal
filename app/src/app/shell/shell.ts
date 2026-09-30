@@ -2,6 +2,8 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LucideCalendarDays, LucideChefHat, LucideHouse, LucideLightbulb, LucideScale, LucideSettings } from '@lucide/angular';
 import { Toast } from '../core/toast';
+import { CelebrationDialog } from '../features/celebrations/celebration';
+import { CelebrationService } from '../features/celebrations/celebration.service';
 import { CheckIn } from '../features/checkin/checkin';
 import { CheckInService } from '../features/checkin/checkin.service';
 import { QuickAdd } from '../features/today/quick-add';
@@ -11,7 +13,7 @@ import { DailyTipService } from '../features/tips/daily-tip.service';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideHouse, LucideCalendarDays, LucideScale, LucideChefHat, LucideLightbulb, LucideSettings, QuickAdd, CheckIn, DailyTip],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideHouse, LucideCalendarDays, LucideScale, LucideChefHat, LucideLightbulb, LucideSettings, QuickAdd, CheckIn, DailyTip, CelebrationDialog],
   template: `
     <header class="top row">
       <strong>kal</strong>
@@ -29,6 +31,9 @@ import { DailyTipService } from '../features/tips/daily-tip.service';
     }
     @if (dailyTip.pick()) {
       <app-daily-tip />
+    }
+    @if (celebrate.due().length > 0) {
+      <app-celebration />
     }
     <nav class="tabs" aria-label="ניווט">
       <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }"><svg lucideHouse [size]="20"></svg>היום</a>
@@ -61,4 +66,5 @@ export class Shell {
   protected readonly quickAdd = inject(QuickAddService);
   protected readonly checkin = inject(CheckInService);
   protected readonly dailyTip = inject(DailyTipService);
+  protected readonly celebrate = inject(CelebrationService);
 }

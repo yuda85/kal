@@ -70,4 +70,9 @@ describe('Today', () => {
     expect(chip.textContent).toContain('היום?');
     expect(chip.classList).toContain('pending');
   });
+
+  it('waits with the check-in while a celebration is open', async () => {
+    await render(new Date('2026-09-27T19:30:00Z'), (repo) => (repo.celebrations = { seen: [] }));
+    expect(TestBed.inject(CheckInService).open()).toBe(false);
+  });
 });

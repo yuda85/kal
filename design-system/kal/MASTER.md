@@ -76,6 +76,7 @@ Status is never conveyed by color alone: always pair with text and/or an icon.
 - **Video card:** like a tip card; a 48×64 play tile (`--border` background, play icon), title, "Instagram · 28.9" muted, the take as a quote with a 3px `--out` inline-start border, "צפייה" (opens a new tab) and a delete icon button (confirm dialog).
 - **Filter chips:** 36px high (44px hit area), pill, `--border` outline; active chip `--primary` fill with `--on-primary` text; one row that scrolls sideways inside itself.
 - **Daily tip dialog:** `role="dialog"`, `aria-modal`, 60% black scrim, centred card (radius 20px), "טיפ היום · <topic>", the reason line as a `--missing-bg/fg` pill when there is one, title 20px/600, body, action line, then star toggle and a primary "הבנתי" (focused on open). No close on scrim tap or Escape: it is closed with "הבנתי".
+- **Celebration dialog (§19):** like the daily tip (scrim, centred card, radius 20px) but centred text: a 64px circle icon (streak `--in` flame, full week / best week `--great`, weight `--out` flag, steps `--out` footprints), title 22px/700, one muted line, a full-width primary "יאללה" (focused on open; Escape closes). Several at once: "כמה הישגים חדשים" and a list. Opens after the daily tip and before the 22:00 check-in.
 - **Toast:** short, past tense ("נשמר"), 3s, above the bottom nav.
 - **Confirm dialog:** only for delete.
 
@@ -115,6 +116,7 @@ CSS transitions 150–250ms, `ease-out`, on opacity/transform only. Honor `prefe
 | Hero + Testimonials pattern | Not used | Landing-page pattern; this is an app |
 | GSAP scroll reveal | CSS transitions | No animation dependency needed |
 | (no RTL match in the database) | Guidance above | General RTL practice, not a database result |
+| CSS transitions 150–250ms only | A 900 ms confetti burst on the celebration dialog (transform and opacity, 16 pieces, none under reduced motion) | The owner asked for a celebration that feels special (§19) |
 
 ## Pre-delivery checklist
 
