@@ -109,6 +109,21 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
               <line class="mean" x1="10" [attr.x2]="SW - 10" [attr.y1]="m.y" [attr.y2]="m.y" />
             }
           </svg>
+          @if (records(); as r) {
+            <div class="records">
+              <div><div class="muted small">רצף 10K</div><div><span class="num">{{ r.streak.days }}</span> ימים</div></div>
+              <div>
+                <div class="muted small">שיא יום</div>
+                <div class="num">{{ r.bestDay ? fmt(r.bestDay.steps) : '—' }}</div>
+                @if (r.bestDay; as b) { <div class="muted small num">{{ shortDate(b.date) }}</div> }
+              </div>
+              <div>
+                <div class="muted small">שיא שבוע</div>
+                <div class="num">{{ r.bestWeek ? fmt(r.bestWeek.steps) : '—' }}</div>
+                @if (r.bestWeek; as b) { <div class="muted small num">{{ shortDate(b.date) }}</div> }
+              </div>
+            </div>
+          }
           <div class="tiers small muted">
             <span><i class="low"></i>מתחת ל-<span class="num">{{ fmt(STEPS_LOW) }}</span></span>
             <span><i class="mid"></i>עד <span class="num">{{ fmt(STEPS_GOAL) }}</span></span>
@@ -184,6 +199,8 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
     .legend, .tiers { display: flex; flex-wrap: wrap; gap: 4px 12px; }
     .legend i { display: inline-block; width: 14px; border-top: 1px dashed var(--fg-muted); vertical-align: middle; margin-inline-end: 4px; }
     .legend i.goal { border-top: 2px solid var(--out); }
+    .records { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; margin-top: 8px; font-size: 16px; font-weight: 500; }
+    .records .small { font-weight: 400; }
     .tiers { margin-top: 4px; }
     .tiers i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-inline-end: 4px; }
     .steps svg { display: block; width: 100%; height: auto; direction: ltr; margin-top: 6px; }
@@ -274,6 +291,8 @@ export class Week {
     const input = this.state.achievementInput();
     return input ? fullWeek(input, this.weekDate()) : null;
   });
+
+  protected readonly records = computed(() => this.state.achievements()?.steps ?? null);
 
   /** The steps chart as a sentence, for screen readers. */
   protected readonly stepsLabel = computed(() => {

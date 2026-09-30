@@ -35,6 +35,10 @@ describe('Week steps', () => {
     expect(card.querySelector('line.goal')).not.toBeNull();
     expect(card.textContent).toContain('יעד 10,000');
     expect(card.querySelector('.tiers')!.textContent).toContain('מעל 13,000');
+    const records = card.querySelector('.records')!;
+    expect(records.textContent).toContain('רצף 10K');
+    expect(records.textContent).toContain('15,200');
+    expect(records.textContent).toContain('27.9');
   });
 });
 
