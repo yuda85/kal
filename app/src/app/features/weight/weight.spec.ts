@@ -4,6 +4,18 @@ import { KalState } from '../../core/kal-state';
 import { KalRepository } from '../../core/repository';
 import { WeightPage } from './weight';
 
+describe('WeightPage styles', () => {
+  it('never stretches an icon: the svg rule is scoped to .card, not bare', () => {
+    const css = (WeightPage as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles.join('');
+    const compact = css.replace(/\s+/g, '');
+    // A bare `svg { ... }` rule (emulated encapsulation: `svg[_ngcontent-...]`) would also
+    // stretch the lucide flag icons in `.next`, which are flex children next to text.
+    expect(compact.startsWith('svg[_ngcontent-%COMP%]{')).toBe(false);
+    expect(compact).not.toContain('}svg[_ngcontent-%COMP%]{');
+    expect(compact).toContain('.card[_ngcontent-%COMP%]svg[_ngcontent-%COMP%]{');
+  });
+});
+
 async function render() {
   const repo = seededRepository();
   // NOW is Sunday 2026-09-27: a weigh-in last Friday, and today's.

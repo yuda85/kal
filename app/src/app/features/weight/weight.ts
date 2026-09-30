@@ -141,13 +141,13 @@ import { CHART_H, CHART_W, weekTitle, weightView } from './weight.logic';
     .ticks { position: relative; height: 6px; }
     .ticks b { position: absolute; top: 0; width: 2px; height: 6px; background: var(--fg-muted); }
     .ticks b.on { background: var(--out); }
-    .next { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; }
-    .next svg { color: var(--out); }
+    .next { margin: 6px 0 0; }
+    .next svg { color: var(--out); vertical-align: -3px; margin-inline-end: 6px; }
     .ends { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
     .alert { margin-block: 12px; }
     .card { margin-block: 12px; }
     h3 { margin: 0 0 6px; font-weight: 500; }
-    svg { display: block; width: 100%; height: auto; direction: ltr; }
+    .card svg { display: block; width: 100%; height: auto; direction: ltr; }
     .grid { stroke: var(--border); }
     .tick, .change, .label { font-size: 10px; fill: var(--fg-muted); font-variant-numeric: tabular-nums; }
     .change, .label { text-anchor: middle; }
