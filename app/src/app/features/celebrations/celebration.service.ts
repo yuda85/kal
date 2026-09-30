@@ -39,11 +39,17 @@ export class CelebrationService {
     return dueCelebrations(earned, doc.seen);
   });
 
+  /** First run seeds once per service instance; a later `null` (e.g. an optimistic local write) must not seed again. */
+  private seeded = false;
+
   constructor() {
     // First run: what is already earned counts as seen, so the update does not open a flood of dialogs.
     effect(() => {
       const earned = this.earned();
-      if (earned && this.state.celebrationState() === null) untracked(() => this.save(earned.map((c) => c.key)));
+      if (!this.seeded && earned && this.state.celebrationState() === null) {
+        this.seeded = true;
+        untracked(() => this.save(earned.map((c) => c.key)));
+      }
     });
   }
 

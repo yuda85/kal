@@ -25,6 +25,14 @@ describe('CelebrationService', () => {
     expect(service.due()).toEqual([]);
   });
 
+  it('seeds only once per service instance, even if the document looks unseeded again', async () => {
+    const { repo } = await setup();
+    expect(repo.savedCelebrations).toHaveLength(1);
+    TestBed.inject(KalState).celebrationState.set(null);
+    TestBed.tick();
+    expect(repo.savedCelebrations).toHaveLength(1);
+  });
+
   it('shows the highest new one of each kind, and close marks all as seen', async () => {
     const { repo, service } = await setup((r) => (r.celebrations = { seen: [] }));
     expect(service.due().map((c) => c.key)).toEqual(['weight-g1-4']);

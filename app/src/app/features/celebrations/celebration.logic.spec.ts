@@ -7,6 +7,7 @@ describe('celebrationText', () => {
 
   it('words each kind, never "on track" for logging or steps', () => {
     expect(join(celebrationText(c('streak', 7)).title)).toBe('7 ימים ברצף!');
+    expect(join(celebrationText(c('streak', 7)).line)).toBe('דיווחת יום אחרי יום. הדיווח הכן הוא מה שגורם לכל השאר לעבוד.');
     expect(join(celebrationText(c('week', 7)).line)).toBe('7 מתוך 7 ימים מלאים: אוכל, צעדים ושקילה.');
     expect(join(celebrationText(c('steps-streak', 3)).title)).toBe('3 ימים ברצף מעל 10,000 צעדים!');
     expect(join(celebrationText(c('steps-day', 14200)).line)).toBe('14,200 צעדים היום.');

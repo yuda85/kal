@@ -85,7 +85,7 @@ export class FakeRepository extends KalRepository {
     this.savedTipStates.push(state);
     return this.result();
   }
-  watchCelebrations(_uid: string, cb: (state: CelebrationState | null) => void): Unsubscribe {
+  watchCelebrations(_uid: string, cb: (state: CelebrationState | null | undefined) => void): Unsubscribe {
     cb(this.celebrations);
     return () => undefined;
   }

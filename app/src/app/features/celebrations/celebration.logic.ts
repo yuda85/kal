@@ -16,7 +16,7 @@ const n = (value: number): Segment => ({ text: fmt(value), num: true });
 export function celebrationText(c: Celebration): { title: Segment[]; line: Segment[] } {
   switch (c.kind) {
     case 'streak':
-      return { title: [n(c.value), t(' ימים ברצף!')], line: [t('דיווחת כל יום. הדיווח הכן הוא מה שגורם לכל השאר לעבוד.')] };
+      return { title: [n(c.value), t(' ימים ברצף!')], line: [t('דיווחת יום אחרי יום. הדיווח הכן הוא מה שגורם לכל השאר לעבוד.')] };
     case 'week':
       return { title: [t('שבוע מושלם!')], line: [n(c.value), t(' מתוך '), n(c.value), t(' ימים מלאים: אוכל, צעדים ושקילה.')] };
     case 'steps-streak':

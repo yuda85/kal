@@ -35,7 +35,7 @@ export abstract class KalRepository {
   /** A missing document arrives as `EMPTY_TIP_STATE`. */
   abstract watchTipState(uid: string, cb: (state: TipState) => void): Unsubscribe;
   abstract saveTipState(uid: string, state: TipState): Promise<void>;
-  abstract watchCelebrations(uid: string, cb: (state: CelebrationState | null) => void): Unsubscribe;
+  abstract watchCelebrations(uid: string, cb: (state: CelebrationState | null | undefined) => void): Unsubscribe;
   abstract saveCelebrations(uid: string, state: CelebrationState): Promise<void>;
   abstract watchVideos(uid: string, cb: (videos: SavedVideo[]) => void): Unsubscribe;
   abstract deleteVideo(uid: string, id: string): Promise<void>;

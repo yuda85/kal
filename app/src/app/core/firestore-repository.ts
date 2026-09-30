@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { collection, deleteDoc, doc, onSnapshot, query, setDoc, where, writeBatch } from 'firebase/firestore';
+import { arrayUnion, collection, deleteDoc, doc, onSnapshot, query, setDoc, where, writeBatch } from 'firebase/firestore';
 import { EMPTY_TIP_STATE, mergeManual, type CelebrationState, type Day, type Entry, type Goal, type PlannedWrites, type Profile, type Recipe, type TipState, type WeighIn } from '../domain';
 import { firestore } from './firebase';
 import { KalRepository, type SavedVideo, type SetupWrite, type Unsubscribe } from './repository';
@@ -92,12 +92,19 @@ export class FirestoreKalRepository extends KalRepository {
     return doc(this.db, 'users', uid, 'meta', 'celebrations');
   }
 
-  watchCelebrations(uid: string, cb: (state: CelebrationState | null) => void): Unsubscribe {
-    return onSnapshot(this.celebrationsDoc(uid), (s) => cb(s.exists() ? { seen: ((s.data() as Partial<CelebrationState>).seen ?? []) } : null));
+  watchCelebrations(uid: string, cb: (state: CelebrationState | null | undefined) => void): Unsubscribe {
+    return onSnapshot(this.celebrationsDoc(uid), { includeMetadataChanges: true }, (s) => {
+      if (s.exists()) {
+        cb({ seen: (s.data() as Partial<CelebrationState>).seen ?? [] });
+        return;
+      }
+      // A missing document served from cache is not yet known to be missing on the server.
+      cb(s.metadata.fromCache ? undefined : null);
+    });
   }
 
   saveCelebrations(uid: string, state: CelebrationState): Promise<void> {
-    return setDoc(this.celebrationsDoc(uid), state);
+    return setDoc(this.celebrationsDoc(uid), { seen: arrayUnion(...state.seen) }, { merge: true });
   }
 
   watchVideos(uid: string, cb: (videos: SavedVideo[]) => void): Unsubscribe {
