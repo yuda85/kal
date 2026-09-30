@@ -213,4 +213,12 @@ describe('celebrations', () => {
     const run2 = earnedCelebrations(achievements({ ...base, today: '2026-10-07', entries: later }), 'g1', '2026-10-07');
     expect(dueCelebrations(run2, run1.map((c) => c.key)).map((c) => c.key)).toEqual(['streak-7-2026-09-30']);
   });
+
+  it('shows two perfect weeks as two celebrations', () => {
+    const steps = (date: string) => ({ date, garmin: { steps: 6000, workouts: [] } });
+    const weeks = ['2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03'];
+    const input = { ...base, today: '2026-10-03', entries: food(...weeks), days: weeks.map(steps), weighIns: weeks.map((date) => ({ date, kg: 85 })) };
+    const due = dueCelebrations(earnedCelebrations(achievements(input), 'g1', '2026-10-03'), []);
+    expect(due.filter((c) => c.kind === 'week').map((c) => c.key)).toEqual(['week-2026-09-20', 'week-2026-09-27']);
+  });
 });

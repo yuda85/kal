@@ -252,10 +252,13 @@ export function earnedCelebrations(a: Achievements, goalId: string, today: strin
   return out;
 }
 
-/** What to show: earned and not seen, only the highest of each kind. */
+const LADDERS: CelebrationKind[] = ['weight', 'streak', 'steps-streak'];
+
+/** What to show: earned and not seen; a milestone ladder (weight, streak, steps-streak) shows only its highest. */
 export function dueCelebrations(earned: Celebration[], seen: string[]): Celebration[] {
   const seenKeys = new Set(seen);
+  const unseen = earned.filter((c) => !seenKeys.has(c.key));
   const top = new Map<CelebrationKind, Celebration>();
-  for (const c of earned) if (!seenKeys.has(c.key)) top.set(c.kind, c);
-  return earned.filter((c) => top.get(c.kind) === c);
+  for (const c of unseen) if (LADDERS.includes(c.kind)) top.set(c.kind, c);
+  return unseen.filter((c) => !LADDERS.includes(c.kind) || top.get(c.kind) === c);
 }
