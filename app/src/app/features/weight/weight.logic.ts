@@ -8,11 +8,13 @@ import {
   trendSeries,
   weekStart,
   weeklyWeights,
+  weightMilestones,
   type DayEnergy,
   type Goal,
   type ReportGap,
   type WeekWeight,
   type WeighIn,
+  type WeightMilestones,
 } from '../../domain';
 import { dayLetter, fmt, shortDate, signedKg } from '../../shared/format';
 
@@ -61,6 +63,9 @@ export interface WeightView {
   days: { date: string; kg: number | null }[];
   eta: string | null;
   gap: ReportGap | null;
+  milestones: WeightMilestones;
+  /** Ticks on the progress bar at every milestone before the target, as % of the way. */
+  ticks: { pct: number; reached: boolean }[];
 }
 
 interface Slot {
@@ -162,6 +167,11 @@ export function weightView(input: {
   const lostKg = currentKg === null ? null : goal.startWeightKg - currentKg;
   const kgByDate = new Map(weighIns.map((w) => [w.date, w.kg]));
   const series = trendSeries(weighIns, today);
+  const milestones = weightMilestones(goal, weighIns, today);
+  const ticks = span <= 0 ? [] : milestones.milestones.slice(0, -1).map((kg) => ({
+    pct: (kg / span) * 100,
+    reached: milestones.reachedKg !== null && kg <= milestones.reachedKg,
+  }));
   return {
     thisWeek: weeks.at(-1)!,
     lastWeek: weeks.at(-2) ?? null,
@@ -176,5 +186,7 @@ export function weightView(input: {
     days: dateRange(daysStart, daysEnd < today ? daysEnd : today).map((date) => ({ date, kg: kgByDate.get(date) ?? null })),
     eta: eta(series, goal, today),
     gap: reportGap({ today, goal, energy: input.energy, series, lowDayThresholdKcal: input.lowDayThresholdKcal }),
+    milestones,
+    ticks,
   };
 }

@@ -68,6 +68,17 @@ describe('weightView', () => {
     expect(zoomed.days[6]).toEqual({ date: '2026-09-26', kg: 87.2 });
     expect(zoomed.thisWeek.start).toBe('2026-09-27');
   });
+
+  it('marks the 2 kg milestones on the bar and names the next one', () => {
+    expect(v.ticks).toEqual([
+      { pct: 20, reached: true },
+      { pct: 40, reached: false },
+      { pct: 60, reached: false },
+      { pct: 80, reached: false },
+    ]);
+    expect(v.milestones.next).toMatchObject({ kg: 4, target: false });
+    expect(v.milestones.next!.leftKg).toBeCloseTo(0.6, 10);
+  });
 });
 
 describe('weekTitle', () => {

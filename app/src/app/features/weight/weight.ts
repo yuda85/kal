@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { LucideFlag } from '@lucide/angular';
 import { KalState } from '../../core/kal-state';
 import { dateRange } from '../../domain';
 import { dayLetter, fmt, shortDate, signedKg } from '../../shared/format';
@@ -8,6 +9,7 @@ import { CHART_H, CHART_W, weekTitle, weightView } from './weight.logic';
 
 @Component({
   selector: 'app-weight',
+  imports: [LucideFlag],
   template: `
     @if (view(); as v) {
       <section class="hero">
@@ -27,11 +29,19 @@ import { CHART_H, CHART_W, weekTitle, weightView } from './weight.logic';
       @if (v.lostKg !== null) {
         <section class="progress">
           <div class="track" role="img" [attr.aria-label]="progressLabel()"><i [style.width.%]="v.progress * 100"></i></div>
+          <div class="ticks" aria-hidden="true">
+            @for (t of v.ticks; track $index) { <b [class.on]="t.reached" [style.inset-inline-start.%]="t.pct"></b> }
+          </div>
           <div class="ends small muted">
             <span>התחלה <span class="num">{{ fmt(v.startKg, 1) }}</span></span>
             <span>{{ v.lostKg >= 0 ? 'ירדו' : 'עלו' }} <span class="num">{{ fmt(v.lostKg >= 0 ? v.lostKg : -v.lostKg, 1) }}</span> · נשארו <span class="num">{{ fmt(v.leftKg, 1) }}</span></span>
             <span>יעד <span class="num">{{ fmt(v.targetKg, 1) }}</span></span>
           </div>
+          @if (v.milestones.next; as n) {
+            <p class="next small"><svg lucideFlag [size]="15" aria-hidden="true"></svg>{{ n.target ? 'היעד' : 'אבן הדרך הבאה' }}: <span class="num" dir="ltr">−{{ fmt(n.kg, 1) }}</span> ק״ג · עוד <span class="num">{{ fmt(n.leftKg, 1) }}</span></p>
+          } @else if (v.milestones.reachedTarget) {
+            <p class="next small"><svg lucideFlag [size]="15" aria-hidden="true"></svg>הגעת ליעד</p>
+          }
         </section>
       }
 
@@ -128,6 +138,11 @@ import { CHART_H, CHART_W, weekTitle, weightView } from './weight.logic';
     .progress { margin-block: 12px; }
     .track { height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
     .track i { display: block; height: 100%; background: var(--out); border-radius: 999px; }
+    .ticks { position: relative; height: 6px; }
+    .ticks b { position: absolute; top: 0; width: 2px; height: 6px; background: var(--fg-muted); }
+    .ticks b.on { background: var(--out); }
+    .next { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; }
+    .next svg { color: var(--out); }
     .ends { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
     .alert { margin-block: 12px; }
     .card { margin-block: 12px; }

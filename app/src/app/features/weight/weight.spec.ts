@@ -40,4 +40,12 @@ describe('WeightPage', () => {
     expect(el.querySelector('.zoom')).toBeNull();
     expect(el.querySelectorAll('rect.hit')).toHaveLength(2);
   });
+
+  it('names the next weight milestone', async () => {
+    const el = (await render()).nativeElement as HTMLElement;
+    // mean 85 this week against a 90 kg start: 4 kg reached, 6 kg next
+    expect(el.querySelector('.next')!.textContent).toContain('אבן הדרך הבאה');
+    expect(el.querySelector('.next')!.textContent).toContain('−6');
+    expect(el.querySelectorAll('.ticks b.on')).toHaveLength(2);
+  });
 });
