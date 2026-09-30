@@ -571,3 +571,42 @@ Owner request of 2026-09-30: see the daily steps average for a week and the step
 - Chart (inline SVG): seven slots Sunday to Saturday labeled by day letter; one bar per day with entered steps, from zero, with the count above; the average as a dashed line and the steps goal as a solid line (the scale always reaches the goal). Today's bar is labeled "עד עכשיו" with a bold day letter. A finished day on or after the goal start without steps gets a short dashed grey outline with "לא הוזן" (the same rule as the row flag "חסר: צעדים"). Today without steps, future days and days before the goal start stay empty.
 - Steps goal and traffic light (owner request of 2026-09-30, later the same day): `STEPS_GOAL` = 10,000 in `domain/steps.ts`, fixed in code. `stepsTier`: under 4,500 red, 4,500–9,999 orange, 10,000–13,000 green, over 13,000 a green-to-violet gradient with a sparkle above the count. Today is coloured by what it reached so far. A legend row under the chart names the four tiers, so colour never carries the meaning alone.
 - The colours grade steps against the steps goal only. They say nothing about weight progress: the weight reality check stays the only "on track" signal (§14). This replaces, for the steps card only, the neutral-bars rule for logged signals.
+
+## 19. Achievements: streaks, full weeks, step records, weight milestones, celebrations (added 2026-09-30)
+
+Owner request of 2026-09-30: more engagement through gamification. Principle: reward what makes the data complete and honest (logging, steps, weigh-ins), never the outcome of the log (a deficit, eating little). Logging and steps achievements never say "on track"; only a weight milestone speaks about weight, because there the scale is the evidence. Everything is computed from the data the app already loads (no stored counters); the only stored state is which celebrations were shown.
+
+### Rules (`domain/achievements.ts`)
+
+- **Logged day:** at least `lowDayThresholdKcal` (800) of food, the same line as the missing-day penalty.
+- **Logging streak:** walk back from yesterday. A logged day adds 1. A day that is not logged is absorbed by that week's single grace day (Sunday to Saturday) when it is still unused, and adds nothing; otherwise the streak stops there. Today adds 1 once logged and never breaks the streak. The streak never reaches before the goal start. When it reaches the start of the loaded entry window (`ENTRY_WINDOW_DAYS`, 90), it reads "90+". Output: `{ days, capped, graceUsedThisWeek, todayCounted }`.
+- **Full day:** logged food, entered steps (`manual.steps ?? garmin.steps`) and a real weigh-in: a finished day with no flag on the week screen. **Full week:** full days out of the week's days on or after the goal start; today counts once it is full. Perfect week: every such day full.
+- **10K streak:** consecutive days with entered steps ≥ `STEPS_GOAL`, no grace; walk back from yesterday; today adds 1 once it passes the goal and does not break the streak before that.
+- **Step records:** best day = the most entered steps on one day, all history. Best week = the highest mean of entered steps over a finished week with at least 5 days of entered steps. A day or week sets a new record only when a previous record exists.
+- **Entered steps:** `expenditure.ts` exports the "manual, else Garmin" rule as a function, used by the expenditure and by the achievements, so the rule lives once.
+- **Weight milestones:** current weight = the mean of the latest week with a real weigh-in (§16; the function moves to `domain/` and the weight screen uses it). Milestones every 2 kg below `startWeightKg`; the last one is `targetWeightKg`. Output: the last milestone reached and the next one with the kg left. If the mean goes back up, the screen shows the current state; a celebration already shown stays shown.
+
+### Screens
+
+- **Today:** a streak chip first in the top row (before the weigh-in and "סגירת יום"): flame icon, the count, "ימים". Today counted: coloured flame, solid outline. Not yet: muted flame, dashed outline and "· היום?". Not a button; its `aria-label` is a sentence ("רצף דיווח 12 ימים, היום עוד לא דווח").
+- **Week:** a "שבוע מלא N/M" card under the date header for the week on screen (M = its days on or after the goal start, 7 after the first week), with seven dots from Sunday: full = filled `--out`, finished and not full = `--missing` outline, future or before the goal = dashed. A perfect week gets a `--great` border and "✦ שבוע מושלם".
+- **Steps card (§18):** three small stats under the chart, above the tier legend: "רצף 10K" (days), "שיא יום" (steps and date), "שיא שבוע" (mean and week start). "—" without a record.
+- **Weight:** a tick on the progress bar at every 2 kg (reached `--out`, others muted), and under it "אבן הדרך הבאה: −4 ק״ג · עוד 0.7" ("הגעת ליעד" at the target).
+
+### Celebrations
+
+- Each achievement celebrates once, by key: logging streak 7, 14, 30, 60, 90 (`streak-<n>-<run start>`), perfect week (`week-<start>`), 10K streak 3, 7, 14, 30 (`steps-streak-<n>-<run start>`), new best day (`steps-day-<date>`, as soon as today passes the previous best), new best week (`steps-week-<start>`, once the week is over), weight milestone (`weight-<goal id>-<kg>`, and `weight-<goal id>-target`). A new run can celebrate its own milestones.
+- A dialog like the daily tip: scrim, centred card, a large icon in a coloured circle (flame, footprints, flag, sparkle), a title ("12 ימים ברצף!"), one line, and "יאללה" (Escape also closes). Several new achievements at once share one dialog as a list.
+- A confetti burst under 1 s, CSS only (transform and opacity), none under `prefers-reduced-motion`: a recorded deviation from the 150–250 ms motion rule.
+- It opens when the app opens or comes back, and as soon as an achievement becomes true while the app is open. Order: the daily tip first, then the celebration, then the 22:00 check-in.
+- First run: when the celebrations document does not exist, every achievement already true is saved as seen without a dialog, so the update does not open a flood of dialogs.
+- State: `users/{uid}/state/celebrations` = `{ seen: string[] }`, written by the app only (the existing rules cover the path). Claude never writes it.
+
+### Claude
+
+- `read.ts achievements` returns what the app shows: logging streak (with grace and today), full week, 10K streak, step records, weight milestone. It loads 90 days of entries and all days and weigh-ins, like the app.
+- `SKILL.md`: Claude may name the streak or how close a record or milestone is ("if you log today, it is day 7"), and never turns a logging or steps achievement into "on track".
+
+### Delivery
+
+In four pushes to `main`, each working on its own: (1) the domain and `read.ts achievements`; (2) the streak chip and the full week card; (3) the step records and weight milestones; (4) the celebrations.
