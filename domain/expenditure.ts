@@ -34,11 +34,15 @@ export function kcalPerStep(weightKg: number, heightCm: number): number {
   return 0.5 * weightKg * strideKm;
 }
 
+/** Steps the owner entered for a day: manual, else Garmin; null when neither (the day then counts `defaultSteps`). */
+export function enteredSteps(day: Day | undefined): number | null {
+  return day?.manual?.steps ?? day?.garmin?.steps ?? null;
+}
+
 export function expenditure(day: Day | undefined, opts: ExpenditureOptions): Expenditure {
-  const manualSteps = day?.manual?.steps;
-  const garminSteps = day?.garmin?.steps;
-  const steps = manualSteps ?? garminSteps ?? opts.defaultSteps;
-  const stepsSource = manualSteps !== undefined ? 'manual' : garminSteps !== undefined ? 'garmin' : 'default';
+  const entered = enteredSteps(day);
+  const steps = entered ?? opts.defaultSteps;
+  const stepsSource = day?.manual?.steps !== undefined ? 'manual' : entered !== null ? 'garmin' : 'default';
   const garmin = day?.garmin?.workouts ?? [];
   const manual = day?.manual?.workouts ?? [];
   const workoutSteps = [...garmin, ...manual].reduce((sum, w) => sum + (w.steps ?? 0), 0);

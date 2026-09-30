@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expenditure, kcalPerStep } from './expenditure.ts';
+import { enteredSteps, expenditure, kcalPerStep } from './expenditure.ts';
 import type { Day } from './types.ts';
 
 const opts = { weightKg: 85, heightCm: 178, bmrKcal: 1792.5, defaultSteps: 3500, baseFactor: 1.2 };
@@ -52,5 +52,14 @@ describe('expenditure', () => {
 
   it('uses the stored base factor', () => {
     expect(expenditure(undefined, { ...opts, baseFactor: 1.3 }).out).toBeCloseTo(1792.5 * 1.3, 8);
+  });
+});
+
+describe('enteredSteps', () => {
+  it('takes manual steps over Garmin, and null without either', () => {
+    expect(enteredSteps({ date: 'd', manual: { steps: 9000 }, garmin: { steps: 4000, workouts: [] } })).toBe(9000);
+    expect(enteredSteps({ date: 'd', garmin: { steps: 4000, workouts: [] } })).toBe(4000);
+    expect(enteredSteps({ date: 'd', manual: { workouts: [] } })).toBeNull();
+    expect(enteredSteps(undefined)).toBeNull();
   });
 });

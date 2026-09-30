@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { meanWeight, weeklyWeights, weightChange } from './weekly.ts';
+import { currentWeight, meanWeight, weeklyWeights, weightChange } from './weekly.ts';
 
 const weighIns = [
   { date: '2026-09-15', kg: 86 }, // week of 09-13
@@ -53,5 +53,18 @@ describe('weeklyWeights', () => {
     const gap = weeklyWeights([{ date: '2026-09-15', kg: 86 }, { date: '2026-09-29', kg: 85 }], '2026-09-13', '2026-09-30');
     expect(gap[1]).toEqual({ start: '2026-09-20', meanKg: null, count: 0, changeKg: null });
     expect(gap[2].changeKg).toBeNull();
+  });
+});
+
+describe('currentWeight', () => {
+  it('is the mean of the latest week with a real weigh-in', () => {
+    const w = [
+      { date: '2026-09-15', kg: 88 },
+      { date: '2026-09-17', kg: 87 },
+      { date: '2026-09-22', kg: 86.5 },
+    ];
+    // the week of 09-27 (today 09-30) has none, so the week of 09-20 counts
+    expect(currentWeight(w, '2026-09-01', '2026-09-30')).toBe(86.5);
+    expect(currentWeight([], '2026-09-01', '2026-09-30')).toBeNull();
   });
 });

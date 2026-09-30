@@ -1,5 +1,6 @@
 import {
   addDays,
+  currentWeight,
   dateRange,
   eta,
   meanWeight,
@@ -154,8 +155,9 @@ export function weightView(input: {
   const selectedWeek = input.week ?? null;
   const daysStart = selectedWeek ?? thisStart;
   const daysEnd = addDays(daysStart, 6);
-  const weeks = weeklyWeights(weighIns, goal.startDate < today ? goal.startDate : today, today);
-  const currentKg = [...weeks].reverse().find((w) => w.meanKg !== null)?.meanKg ?? null;
+  const from = goal.startDate < today ? goal.startDate : today;
+  const weeks = weeklyWeights(weighIns, from, today);
+  const currentKg = currentWeight(weighIns, from, today);
   const span = goal.startWeightKg - goal.targetWeightKg;
   const lostKg = currentKg === null ? null : goal.startWeightKg - currentKg;
   const kgByDate = new Map(weighIns.map((w) => [w.date, w.kg]));

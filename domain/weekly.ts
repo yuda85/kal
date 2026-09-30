@@ -42,3 +42,8 @@ export function weeklyWeights(weighIns: WeighIn[], from: string, today: string):
   }
   return weeks;
 }
+
+/** The weight that counts now (§16): the mean of the latest week, from the week of `from`, with a real weigh-in. */
+export function currentWeight(weighIns: WeighIn[], from: string, today: string): number | null {
+  return [...weeklyWeights(weighIns, from, today)].reverse().find((w) => w.meanKg !== null)?.meanKg ?? null;
+}
