@@ -67,11 +67,15 @@ export interface StreakChip {
   count: string;
   today: boolean;
   label: string;
+  /** A 1-day, uncapped streak reads "יום אחד" instead of the count and "ימים". */
+  one: boolean;
 }
 
 /** The Today chip (§19); null without a streak. */
 export function streakChip(s: LoggingStreak): StreakChip | null {
   if (s.days === 0) return null;
+  const one = !s.capped && s.days === 1;
   const count = s.capped ? `${s.days}+` : String(s.days);
-  return { count, today: s.todayCounted, label: `רצף דיווח ${count} ימים, ${s.todayCounted ? 'היום כבר דווח' : 'היום עוד לא דווח'}` };
+  const daysText = one ? 'יום אחד' : `${count} ימים`;
+  return { count, today: s.todayCounted, one, label: `רצף דיווח ${daysText}, ${s.todayCounted ? 'היום כבר דווח' : 'היום עוד לא דווח'}` };
 }

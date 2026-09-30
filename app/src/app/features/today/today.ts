@@ -21,7 +21,7 @@ import { staleSyncHours, streakChip, targetBreakdown } from './today.logic';
       <div class="row top">
         @if (streak(); as k) {
           <span class="chip streak" [class.pending]="!k.today" role="img" [attr.aria-label]="k.label">
-            <svg lucideFlame [size]="16" aria-hidden="true"></svg><span class="num">{{ k.count }}</span> ימים@if (!k.today) {<span> · היום?</span>}
+            <svg lucideFlame [size]="16" aria-hidden="true"></svg>@if (k.one) {יום אחד} @else {<span class="num">{{ k.count }}</span> ימים}@if (!k.today) {<span> · היום?</span>}
           </span>
         }
         <button type="button" class="chip" [class.missing]="!weighIn()" (click)="quickAdd.open('weight')">

@@ -58,6 +58,21 @@ describe('Week KPI copy', () => {
   });
 });
 
+describe('Week steps record, singular day count', () => {
+  it('shows a 1-day 10K streak as "יום אחד", with no number span', async () => {
+    // Seeded: 15,200 Garmin steps on Sunday 09-27, nothing before it. Today is Monday 09-28: streak is 1 day.
+    TestBed.configureTestingModule({ imports: [Week], providers: [{ provide: KalRepository, useValue: seededRepository() }] });
+    const state = TestBed.inject(KalState);
+    state.now.set(new Date('2026-09-28T10:00:00Z'));
+    state.start('u1');
+    const fixture = TestBed.createComponent(Week);
+    await fixture.whenStable();
+    const streakBlock = (fixture.nativeElement as HTMLElement).querySelector('.records')!.children[0] as HTMLElement;
+    expect(streakBlock.textContent).toContain('יום אחד');
+    expect(streakBlock.querySelector('.num')).toBeNull();
+  });
+});
+
 describe('Week full week', () => {
   it('scores the week on screen with a dot per day', async () => {
     // Seeded Sunday 09-27: 320 kcal (under 800), 15,200 steps, weigh-in → not full. Today is Tuesday 09-29.

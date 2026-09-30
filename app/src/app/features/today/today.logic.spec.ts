@@ -59,13 +59,25 @@ describe('today logic', () => {
     const s = { days: 12, capped: false, graceUsedThisWeek: false, todayCounted: true, start: '2026-09-19' };
 
     it('shows the count and whether today already counts', () => {
-      expect(streakChip(s)).toEqual({ count: '12', today: true, label: 'רצף דיווח 12 ימים, היום כבר דווח' });
+      expect(streakChip(s)).toEqual({ count: '12', today: true, one: false, label: 'רצף דיווח 12 ימים, היום כבר דווח' });
       expect(streakChip({ ...s, todayCounted: false })!.label).toBe('רצף דיווח 12 ימים, היום עוד לא דווח');
     });
 
     it('marks a capped streak with a plus, and hides an empty one', () => {
       expect(streakChip({ ...s, capped: true, days: 85 })!.count).toBe('85+');
       expect(streakChip({ ...s, days: 0, todayCounted: false, start: null })).toBeNull();
+    });
+
+    it('reads "יום אחד" for a 1-day streak, without a number', () => {
+      const one = streakChip({ ...s, days: 1, todayCounted: true })!;
+      expect(one.one).toBe(true);
+      expect(one.label).toBe('רצף דיווח יום אחד, היום כבר דווח');
+    });
+
+    it('keeps the "N+ ימים" form for a capped streak even when the number reads 1', () => {
+      const cappedOne = streakChip({ ...s, days: 1, capped: true, todayCounted: false })!;
+      expect(cappedOne.one).toBe(false);
+      expect(cappedOne.label).toBe('רצף דיווח 1+ ימים, היום עוד לא דווח');
     });
   });
 });

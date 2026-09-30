@@ -111,7 +111,7 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
           </svg>
           @if (records(); as r) {
             <div class="records">
-              <div><div class="muted small">רצף 10K</div><div><span class="num">{{ r.streak.days }}</span> ימים</div></div>
+              <div><div class="muted small">רצף 10K</div><div>@if (r.streak.days === 1) {יום אחד} @else {<span class="num">{{ r.streak.days }}</span> ימים}</div></div>
               <div>
                 <div class="muted small">שיא יום</div>
                 <div class="num">{{ r.bestDay ? fmt(r.bestDay.steps) : '—' }}</div>

@@ -66,7 +66,7 @@ describe('Today', () => {
     // seeded: 320 kcal today (under 800), nothing before → no streak; add yesterday's food
     const el = await render(NOW, (repo) => repo.entries.push({ ...repo.entries[0], id: 'y1', date: '2026-09-26', kcal: 1500 }));
     const chip = el.querySelector('.chip.streak')!;
-    expect(chip.textContent).toContain('1');
+    expect(chip.textContent).toContain('יום אחד');
     expect(chip.textContent).toContain('היום?');
     expect(chip.classList).toContain('pending');
   });
