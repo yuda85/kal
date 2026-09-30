@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loggingStreak, type AchievementInput } from './achievements.ts';
+import { fullWeek, loggingStreak, type AchievementInput } from './achievements.ts';
 import { makeEntry, testGoal } from './testing.ts';
 
 // 2026-09-27 is a Sunday; today is Wednesday 2026-09-30.
@@ -58,5 +58,40 @@ describe('loggingStreak', () => {
     const s = loggingStreak({ ...base, entries, entriesFrom: '2026-09-25' });
     expect(s.days).toBe(5);
     expect(s.capped).toBe(true);
+  });
+});
+
+describe('fullWeek', () => {
+  const steps = (date: string) => ({ date, garmin: { steps: 6000, workouts: [] } });
+  const weigh = (date: string) => ({ date, kg: 85 });
+  const input: AchievementInput = {
+    ...base,
+    entries: food('2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30'),
+    days: ['2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30'].map(steps),
+    weighIns: ['2026-09-27', '2026-09-29', '2026-09-30'].map(weigh),
+  };
+
+  it('scores the days with food, steps and a real weigh-in', () => {
+    const w = fullWeek(input, '2026-09-30');
+    expect(w.start).toBe('2026-09-27');
+    expect(w.days.map((d) => d.state)).toEqual(['full', 'partial', 'full', 'full', 'open', 'open', 'open']);
+    expect([w.full, w.of, w.perfect]).toEqual([3, 7, false]);
+  });
+
+  it('leaves today open until it is full', () => {
+    const w = fullWeek({ ...input, weighIns: input.weighIns.filter((x) => x.date !== '2026-09-30') }, '2026-09-30');
+    expect(w.days[3].state).toBe('open');
+  });
+
+  it('counts only the days on or after the goal start', () => {
+    const w = fullWeek({ ...input, goal: { ...base.goal, startDate: '2026-09-29' } }, '2026-09-30');
+    expect(w.days.slice(0, 2).map((d) => d.state)).toEqual(['open', 'open']);
+    expect([w.full, w.of]).toEqual([2, 5]);
+  });
+
+  it('is perfect when every day is full', () => {
+    const week = ['2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26'];
+    const w = fullWeek({ ...base, entries: food(...week), days: week.map(steps), weighIns: week.map(weigh) }, '2026-09-22');
+    expect([w.full, w.of, w.perfect]).toEqual([7, 7, true]);
   });
 });

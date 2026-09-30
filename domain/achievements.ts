@@ -1,4 +1,5 @@
-import { addDays, weekStart } from './dates.ts';
+import { addDays, dateRange, weekStart } from './dates.ts';
+import { enteredSteps } from './expenditure.ts';
 import type { Day, Entry, Goal, WeighIn } from './types.ts';
 
 /** How many days of entries the app and `read.ts` load; a logging streak cannot see past it. */
@@ -61,4 +62,34 @@ export function loggingStreak(input: AchievementInput): LoggingStreak {
     start ??= input.today;
   }
   return { days, capped, graceUsedThisWeek: graced.has(weekStart(input.today)), todayCounted, start };
+}
+
+export type DayState = 'full' | 'partial' | 'open';
+
+export interface FullWeek {
+  start: string;
+  /** Sunday to Saturday. open: today not full yet, the future, or before the goal start. */
+  days: { date: string; state: DayState }[];
+  full: number;
+  /** The week's days on or after the goal start. */
+  of: number;
+  perfect: boolean;
+}
+
+/** §19: a full day has logged food, entered steps and a real weigh-in (a finished day with no flag). */
+export function fullWeek(input: AchievementInput, date: string): FullWeek {
+  const start = weekStart(date);
+  const kcal = kcalByDate(input.entries);
+  const dayByDate = new Map(input.days.map((d) => [d.date, d]));
+  const weighed = new Set(input.weighIns.map((w) => w.date));
+  const isFull = (d: string) =>
+    (kcal.get(d) ?? 0) >= input.lowDayThresholdKcal && enteredSteps(dayByDate.get(d)) !== null && weighed.has(d);
+  const days = dateRange(start, addDays(start, 6)).map((d): { date: string; state: DayState } => {
+    if (d < input.goal.startDate || d > input.today) return { date: d, state: 'open' };
+    if (isFull(d)) return { date: d, state: 'full' };
+    return { date: d, state: d === input.today ? 'open' : 'partial' };
+  });
+  const of = days.filter((d) => d.date >= input.goal.startDate).length;
+  const full = days.filter((d) => d.state === 'full').length;
+  return { start, days, full, of, perfect: of > 0 && full === of };
 }
