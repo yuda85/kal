@@ -1,11 +1,16 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import {
+  achievements,
   addDays,
   dateRange,
+  ENTRY_WINDOW_DAYS,
   localDate,
   realityCheck,
   REALITY_WINDOW_DAYS,
+  settingsOf,
   summarizeDay,
+  type AchievementInput,
+  type Achievements,
   type Day,
   type DayEnergy,
   type DaySummary,
@@ -19,14 +24,12 @@ import {
 } from '../domain';
 import { KalRepository, type SavedVideo, type Unsubscribe } from './repository';
 
-export const ENTRY_WINDOW_DAYS = 90;
-
 @Injectable({ providedIn: 'root' })
 export class KalState {
   private readonly repo = inject(KalRepository);
   private unsubscribers: Unsubscribe[] = [];
   private timer: ReturnType<typeof setInterval> | undefined;
-  private loaded: Promise<void> = Promise.resolve();
+  private loadedPromise: Promise<void> = Promise.resolve();
   // Timers are suspended while a phone app sits in the background; refresh the clock on return.
   private readonly onForeground = () => {
     if (document.visibilityState === 'visible') this.refreshNow();
@@ -43,6 +46,11 @@ export class KalState {
   readonly tipState = signal<TipState | undefined>(undefined);
   readonly videos = signal<SavedVideo[]>([]);
   readonly now = signal(new Date());
+  /** Profile, goals, days and weigh-ins have arrived (the same moment `whenLoaded` resolves). */
+  readonly loaded = signal(false);
+  readonly entriesLoaded = signal(false);
+  /** The first date whose entries are loaded. */
+  readonly entriesFrom = signal(addDays(localDate(new Date()), -ENTRY_WINDOW_DAYS));
 
   readonly today = computed(() => localDate(this.now()));
   readonly goal = computed(() => {
@@ -66,6 +74,24 @@ export class KalState {
     if (!goal || !this.profile()) return null;
     return realityCheck({ today: this.today(), goal, weighIns: this.weighIns(), energy: this.recentEnergy() });
   });
+  readonly achievementInput = computed<AchievementInput | null>(() => {
+    const profile = this.profile();
+    const goal = this.goal();
+    if (!profile || !goal) return null;
+    return {
+      today: this.today(),
+      goal,
+      entries: this.entries(),
+      days: this.days(),
+      weighIns: this.weighIns(),
+      lowDayThresholdKcal: settingsOf(profile).lowDayThresholdKcal,
+      entriesFrom: this.entriesFrom(),
+    };
+  });
+  readonly achievements = computed<Achievements | null>(() => {
+    const input = this.achievementInput();
+    return input ? achievements(input) : null;
+  });
 
   start(uid: string): void {
     if (this.uid() === uid) return;
@@ -73,14 +99,17 @@ export class KalState {
     this.uid.set(uid);
     let pending = 4;
     let resolve!: () => void;
-    this.loaded = new Promise<void>((r) => (resolve = r));
+    this.loadedPromise = new Promise<void>((r) => (resolve = r));
     const once = () => {
       let done = false;
       return () => {
         if (done) return;
         done = true;
         pending -= 1;
-        if (pending === 0) resolve();
+        if (pending === 0) {
+          this.loaded.set(true);
+          resolve();
+        }
       };
     };
     const profileArrived = once();
@@ -88,6 +117,7 @@ export class KalState {
     const daysArrived = once();
     const weighInsArrived = once();
     const from = addDays(this.today(), -ENTRY_WINDOW_DAYS);
+    this.entriesFrom.set(from);
     this.unsubscribers = [
       this.repo.watchProfile(uid, (p) => {
         this.profile.set(p);
@@ -97,7 +127,10 @@ export class KalState {
         this.goals.set(g);
         goalsArrived();
       }),
-      this.repo.watchEntries(uid, from, (e) => this.entries.set(e)),
+      this.repo.watchEntries(uid, from, (e) => {
+        this.entries.set(e);
+        this.entriesLoaded.set(true);
+      }),
       this.repo.watchDays(uid, (d) => {
         this.days.set(d);
         daysArrived();
@@ -134,10 +167,12 @@ export class KalState {
     this.recipes.set([]);
     this.tipState.set(undefined);
     this.videos.set([]);
+    this.loaded.set(false);
+    this.entriesLoaded.set(false);
   }
 
   whenLoaded(): Promise<void> {
-    return this.loaded;
+    return this.loadedPromise;
   }
 
   dayFor(date: string, overrides: { entries?: Entry[]; weighIns?: WeighIn[]; days?: Day[] } = {}): DaySummary | null {

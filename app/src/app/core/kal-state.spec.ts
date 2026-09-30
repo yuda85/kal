@@ -80,4 +80,19 @@ describe('KalState', () => {
     const first = await Promise.race([state.whenLoaded().then(() => 'loaded'), new Promise((r) => setTimeout(() => r('waiting'), 20))]);
     expect(first).toBe('waiting');
   });
+
+  it('computes the achievements once everything has loaded', () => {
+    const state = setup();
+    expect(state.loaded()).toBe(true);
+    expect(state.entriesLoaded()).toBe(true);
+    // seeded: weigh-in 85 kg against a 90 → 80 goal
+    expect(state.achievements()!.weight.reachedKg).toBe(4);
+    expect(state.achievementInput()!.entriesFrom).toBe('2026-06-29');
+  });
+
+  it('reports entries as not loaded until they arrive', () => {
+    const repo = seededRepository();
+    repo.watchEntries = () => () => undefined;
+    expect(setup(repo).entriesLoaded()).toBe(false);
+  });
 });

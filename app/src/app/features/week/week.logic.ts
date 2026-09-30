@@ -1,7 +1,7 @@
-import { ENTRY_WINDOW_DAYS } from '../../core/kal-state';
 import {
   addDays,
   dateRange,
+  ENTRY_WINDOW_DAYS,
   STEPS_GOAL,
   stepsTier,
   summarizeMonth,
