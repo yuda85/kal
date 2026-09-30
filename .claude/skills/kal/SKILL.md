@@ -15,9 +15,9 @@ Reply in the user's language (usually Hebrew). Keep replies short.
 node .claude/skills/kal/scripts/read.ts profile        # goal, trend, BMR, typical-day target and macros, weight reality, ETA, report gap
 node .claude/skills/kal/scripts/read.ts day [date]     # intake, out breakdown, target, remaining, macros, warnings
 node .claude/skills/kal/scripts/read.ts week [date]    # the Sun–Sat week containing date: averages (avgSteps: finished days with entered steps), missing days, stepsEntered / weighedIn per day
+node .claude/skills/kal/scripts/read.ts achievements        # logging streak (grace, today), this/last full week, 10K streak, step records, weight milestones
 node .claude/skills/kal/scripts/read.ts month [YYYY-MM] # workouts, penalized days, logged vs weight deficit
 node .claude/skills/kal/scripts/read.ts recipes        # saved recipes with per-unit / per-100 g values
-node .claude/skills/kal/scripts/read.ts achievements        # logging streak (grace, today), this/last full week, 10K streak, step records, weight milestones
 ```
 
 Build links by passing the JSON on stdin through a **quoted heredoc** — never as a single-quoted argument, because Hebrew names often contain an ASCII apostrophe (קוטג', צ'יפס, ג'חנון) that would break the shell quoting:
