@@ -1,8 +1,9 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, computed, DestroyRef, effect, inject, signal, viewChild, type ElementRef } from '@angular/core';
 import type { Chart } from 'chart.js';
 import { LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
 import { KalState } from '../../core/kal-state';
-import { addDays, reportGap, settingsOf, trendSeries } from '../../domain';
+import { addDays, reportGap, settingsOf, STEPS_GOAL, STEPS_GREAT, STEPS_LOW, trendSeries } from '../../domain';
 import { fontsReady, weekChart } from '../../shared/charts';
 import { fmt, shortDate } from '../../shared/format';
 import { realityLine } from '../../shared/reality-line';
@@ -60,28 +61,48 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
 
         <section class="card steps">
           <div class="muted small">צעדים</div>
-          <div class="avg"><span class="num">{{ v.summary.avgSteps === null ? '—' : fmt(v.summary.avgSteps) }}</span> <small>ממוצע ליום</small></div>
-          @if (v.steps.mean) {
-            <div class="legend small muted"><i></i>{{ v.summary.stepsDays === 1 ? 'לפי יום אחד שהסתיים' : 'לפי ' + v.summary.stepsDays + ' ימים שהסתיימו' }}</div>
-          } @else {
-            <div class="small muted">עוד אין יום שהסתיים עם צעדים</div>
-          }
+          <div class="avg"><span class="num">{{ v.summary.avgSteps === null ? '—' : fmt(v.summary.avgSteps) }}</span><small>ממוצע ליום</small></div>
+          <div class="legend small muted">
+            @if (v.steps.mean) {
+              <span><i></i>{{ v.summary.stepsDays === 1 ? 'לפי יום אחד שהסתיים' : 'לפי ' + v.summary.stepsDays + ' ימים שהסתיימו' }}</span>
+            } @else {
+              <span>עוד אין יום שהסתיים עם צעדים</span>
+            }
+            <span><i class="goal"></i>יעד <span class="num">{{ fmt(STEPS_GOAL) }}</span></span>
+          </div>
           <svg [attr.viewBox]="'0 0 ' + SW + ' ' + SH" role="img" [attr.aria-label]="stepsLabel()">
+            <defs>
+              <linearGradient id="steps-great" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0" class="from" />
+                <stop offset="1" class="to" />
+              </linearGradient>
+            </defs>
             <line class="base" x1="10" [attr.x2]="SW - 10" [attr.y1]="SB" [attr.y2]="SB" />
             @for (s of v.steps.slots; track $index) {
               @if (s.kind !== 'empty') {
-                <rect [class]="s.kind" [class.now]="s.current" [attr.x]="s.x - 11" [attr.y]="s.y" width="22" [attr.height]="s.height" rx="3" />
-                <text class="note" [class.missing]="s.kind === 'missing'" [class.now]="s.current" [attr.x]="s.x" [attr.y]="s.y - 5">{{ s.note }}</text>
+                <rect [class]="s.kind + (s.tier ? ' ' + s.tier : '')" [attr.fill]="s.tier === 'great' ? greatFill : null"
+                  [attr.x]="s.x - 11" [attr.y]="s.y" width="22" [attr.height]="s.height" rx="3" />
+                <text class="note" [class.now]="s.current" [attr.x]="s.x" [attr.y]="s.y - 5">{{ s.note }}</text>
+                @if (s.tier === 'great') {
+                  <path class="sparkle" [attr.transform]="'translate(' + s.x + ' ' + (s.y - 22) + ')'" d="M0-6L1.8-1.8 6 0 1.8 1.8 0 6-1.8 1.8-6 0-1.8-1.8Z" />
+                }
               }
               <text class="label" [class.now]="s.current" [attr.x]="s.x" [attr.y]="SB + 16">{{ s.label }}</text>
               @if (s.current && s.kind === 'bar') {
                 <text class="label" [attr.x]="s.x" [attr.y]="SB + 28">עד עכשיו</text>
               }
             }
+            <line class="goal" x1="10" [attr.x2]="SW - 10" [attr.y1]="v.steps.goal.y" [attr.y2]="v.steps.goal.y" />
             @if (v.steps.mean; as m) {
               <line class="mean" x1="10" [attr.x2]="SW - 10" [attr.y1]="m.y" [attr.y2]="m.y" />
             }
           </svg>
+          <div class="tiers small muted">
+            <span><i class="low"></i>מתחת ל-<span class="num">{{ fmt(STEPS_LOW) }}</span></span>
+            <span><i class="mid"></i>עד <span class="num">{{ fmt(STEPS_GOAL) }}</span></span>
+            <span><i class="goal"></i>יעד</span>
+            <span><i class="great"></i>✦ מעל <span class="num">{{ fmt(STEPS_GREAT) }}</span></span>
+          </div>
         </section>
 
         <ul class="rows">
@@ -140,18 +161,27 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
     .value { font-size: 20px; font-weight: 500; }
     .chart { position: relative; height: 200px; margin-block: 12px; }
     .steps { margin-block: 12px; }
-    .avg { font-size: 26px; font-weight: 500; line-height: 1.3; }
+    .avg { display: flex; align-items: baseline; gap: 8px; font-size: 26px; font-weight: 500; line-height: 1.3; }
     .avg small { font-size: 13px; font-weight: 400; color: var(--fg-muted); }
+    .legend, .tiers { display: flex; flex-wrap: wrap; gap: 4px 12px; }
     .legend i { display: inline-block; width: 14px; border-top: 1px dashed var(--fg-muted); vertical-align: middle; margin-inline-end: 4px; }
+    .legend i.goal { border-top: 2px solid var(--out); }
+    .tiers { margin-top: 4px; }
+    .tiers i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-inline-end: 4px; }
     .steps svg { display: block; width: 100%; height: auto; direction: ltr; margin-top: 6px; }
     .steps .base { stroke: var(--border); }
-    /* Steps are logged, not a verdict: neutral bars; only today stands out. */
-    .steps rect.bar { fill: var(--neutral-bar); }
-    .steps rect.bar.now { fill: var(--out); }
-    .steps rect.missing { fill: none; stroke: var(--missing); stroke-dasharray: 3 2; }
+    /* Traffic light against the steps goal (§18): it grades steps only, never weight progress. */
+    .steps rect.low, .tiers .low { fill: var(--danger); background: var(--danger); }
+    .steps rect.mid, .tiers .mid { fill: var(--in); background: var(--in); }
+    .steps rect.goal, .tiers .goal { fill: var(--out); background: var(--out); }
+    .tiers .great { background: linear-gradient(to top, var(--out), var(--great)); }
+    .steps stop.from { stop-color: var(--out); }
+    .steps stop.to { stop-color: var(--great); }
+    .steps .sparkle { fill: var(--great); }
+    .steps rect.missing { fill: none; stroke: var(--fg-muted); stroke-dasharray: 3 2; }
+    .steps .goal { stroke: var(--out); stroke-width: 1.5; }
     .steps .mean { stroke: var(--fg-muted); stroke-dasharray: 4 3; }
     .steps text { font-size: 10px; fill: var(--fg-muted); text-anchor: middle; font-variant-numeric: tabular-nums; }
-    .steps text.missing { fill: var(--missing-fg); }
     .steps text.now { fill: var(--fg); font-weight: 700; }
     .rows { list-style: none; margin: 0; padding: 0; }
     .rows li { padding-block: 6px; padding-inline-start: 8px; border-block-end: 1px solid var(--border); border-inline-start: 3px solid transparent; font-size: 13px; }
@@ -188,6 +218,11 @@ export class Week {
   protected readonly SW = STEPS_W;
   protected readonly SH = STEPS_H;
   protected readonly SB = STEPS_BOTTOM;
+  protected readonly STEPS_GOAL = STEPS_GOAL;
+  protected readonly STEPS_LOW = STEPS_LOW;
+  protected readonly STEPS_GREAT = STEPS_GREAT;
+  /** Absolute: with <base href="/"> Safari resolves a bare url(#id) against the base, not this page. */
+  protected readonly greatFill = `url(${inject(DOCUMENT).location.href.split('#')[0]}#steps-great)`;
   protected readonly mode = signal<'week' | 'month'>('week');
   protected readonly month = signal(this.state.today().slice(0, 7));
   private readonly weekDate = signal(this.state.today());
@@ -226,7 +261,7 @@ export class Week {
       .map((s) => `${s.label} ${s.note}${s.current ? ' עד עכשיו' : ''}`)
       .join(', ');
     const mean = v.summary.avgSteps === null ? '' : `. ממוצע ${fmt(v.summary.avgSteps)}`;
-    return `צעדים לפי יום: ${days || 'אין'}${mean}`;
+    return `צעדים לפי יום: ${days || 'אין'}${mean}. יעד ${fmt(STEPS_GOAL)}`;
   });
 
   protected readonly monthData = computed(() => {

@@ -28,5 +28,12 @@ describe('Week steps', () => {
     expect(card.textContent).toContain('לפי יום אחד שהסתיים');
     expect(card.querySelectorAll('rect.bar')).toHaveLength(1);
     expect(card.querySelectorAll('rect.missing')).toHaveLength(1);
+    // 15,200 steps: a great day, with the gradient, a sparkle, the goal line and the legend
+    const great = card.querySelector('rect.bar.great')!;
+    expect(great.getAttribute('fill')).toMatch(/^url\(.*#steps-great\)$/);
+    expect(card.querySelectorAll('.sparkle')).toHaveLength(1);
+    expect(card.querySelector('line.goal')).not.toBeNull();
+    expect(card.textContent).toContain('יעד 10,000');
+    expect(card.querySelector('.tiers')!.textContent).toContain('מעל 13,000');
   });
 });

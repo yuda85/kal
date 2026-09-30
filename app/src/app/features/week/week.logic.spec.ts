@@ -112,6 +112,23 @@ describe('steps chart', () => {
     expect(c.slots.map((s) => s.current)).toEqual([false, false, false, true, false, false, false]);
   });
 
+  it('colours each bar by its steps tier, today included', () => {
+    expect(c.slots.map((s) => s.tier)).toEqual(['mid', 'mid', null, 'low', null, null, null]);
+  });
+
+  it('always reaches the 10,000-step goal line, above the bars under it', () => {
+    expect(c.goal.steps).toBe(10000);
+    expect(c.goal.y).toBeLessThan(c.slots[1].y);
+    expect(c.goal.y).toBeLessThan(c.mean!.y);
+  });
+
+  it('lets a great day rise above the goal line', () => {
+    const great = weekView({ ...input, days: [...input.days, { date: '2026-09-29', manual: { steps: 14200 } }] }).steps;
+    expect(great.slots[2].tier).toBe('great');
+    expect(great.slots[2].y).toBeLessThan(great.goal.y);
+    expect(great.slots[2].y + great.slots[2].height).toBeCloseTo(STEPS_BOTTOM, 10);
+  });
+
   it('draws the mean of the finished days as a line', () => {
     expect(c.mean?.steps).toBe(7800);
     expect(c.mean!.y).toBeGreaterThan(c.slots[1].y);
