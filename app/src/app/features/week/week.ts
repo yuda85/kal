@@ -54,7 +54,7 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
           <div class="card">
             <div class="muted small">ממוצע נכנס</div>
             <div class="num value">{{ fmt(v.summary.avgInKcal) }}</div>
-            <div class="muted small"><span class="num">{{ v.summary.daysLogged }}</span> ימים מלאים · <span class="num">{{ v.summary.imputedDays }}</span> לא הוזנו</div>
+            <div class="muted small"><span class="num">{{ v.summary.daysLogged }}</span> ימים מדווחים · <span class="num">{{ v.summary.imputedDays }}</span> לא הוזנו</div>
           </div>
           <div class="card">
             <div class="muted small">אימונים</div>
@@ -289,7 +289,9 @@ export class Week {
 
   protected readonly full = computed(() => {
     const input = this.state.achievementInput();
-    return input ? fullWeek(input, this.weekDate()) : null;
+    if (!input) return null;
+    const f = fullWeek(input, this.weekDate());
+    return f.of === 0 ? null : f;
   });
 
   protected readonly records = computed(() => this.state.achievements()?.steps ?? null);

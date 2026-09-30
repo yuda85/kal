@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { testGoal } from '../../../../../domain/testing.ts';
 import { seededRepository } from '../../../testing/fake-repository';
 import { KalState } from '../../core/kal-state';
 import { KalRepository } from '../../core/repository';
@@ -42,6 +43,21 @@ describe('Week steps', () => {
   });
 });
 
+describe('Week KPI copy', () => {
+  it('labels the average-in context line "ימים מדווחים", not "ימים מלאים" (that phrase is the full-week card)', async () => {
+    TestBed.configureTestingModule({ imports: [Week], providers: [{ provide: KalRepository, useValue: seededRepository() }] });
+    const state = TestBed.inject(KalState);
+    state.now.set(new Date('2026-09-29T10:00:00Z'));
+    state.start('u1');
+    const fixture = TestBed.createComponent(Week);
+    await fixture.whenStable();
+    const kpis = (fixture.nativeElement as HTMLElement).querySelectorAll('.kpis .card');
+    const avgInCard = [...kpis].find((c) => c.textContent?.includes('ממוצע נכנס'))!;
+    expect(avgInCard.textContent).toContain('ימים מדווחים');
+    expect(avgInCard.textContent).not.toContain('ימים מלאים');
+  });
+});
+
 describe('Week full week', () => {
   it('scores the week on screen with a dot per day', async () => {
     // Seeded Sunday 09-27: 320 kcal (under 800), 15,200 steps, weigh-in → not full. Today is Tuesday 09-29.
@@ -55,5 +71,17 @@ describe('Week full week', () => {
     expect(card.textContent).toContain('שבוע מלא');
     expect(card.textContent).toContain('0/7');
     expect([...card.querySelectorAll('.dots li')].map((d) => d.className)).toEqual(['partial', 'partial', 'open', 'open', 'open', 'open', 'open']);
+  });
+
+  it('renders no full-week card for a week entirely before the goal start', async () => {
+    const repo = seededRepository();
+    repo.goals = [{ ...testGoal, startDate: '2026-10-04' }]; // after the week on screen (09-27–10-03)
+    TestBed.configureTestingModule({ imports: [Week], providers: [{ provide: KalRepository, useValue: repo }] });
+    const state = TestBed.inject(KalState);
+    state.now.set(new Date('2026-09-29T10:00:00Z'));
+    state.start('u1');
+    const fixture = TestBed.createComponent(Week);
+    await fixture.whenStable();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.fullweek')).toBeNull();
   });
 });
