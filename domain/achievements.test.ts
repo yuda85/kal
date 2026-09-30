@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fullWeek, loggingStreak, type AchievementInput } from './achievements.ts';
+import { fullWeek, loggingStreak, stepsAchievements, type AchievementInput } from './achievements.ts';
 import { makeEntry, testGoal } from './testing.ts';
 
 // 2026-09-27 is a Sunday; today is Wednesday 2026-09-30.
@@ -93,5 +93,42 @@ describe('fullWeek', () => {
     const week = ['2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26'];
     const w = fullWeek({ ...base, entries: food(...week), days: week.map(steps), weighIns: week.map(weigh) }, '2026-09-22');
     expect([w.full, w.of, w.perfect]).toEqual([7, 7, true]);
+  });
+});
+
+describe('stepsAchievements', () => {
+  const g = (date: string, steps: number) => ({ date, garmin: { steps, workouts: [] } });
+
+  it('counts days at 10,000 or more back from yesterday, with no grace', () => {
+    const days = [g('2026-09-26', 9000), g('2026-09-27', 12000), { date: '2026-09-28', manual: { steps: 10000 } }, g('2026-09-29', 10500), g('2026-09-30', 4000)];
+    const s = stepsAchievements({ ...base, days });
+    expect(s.streak).toEqual({ days: 3, start: '2026-09-27', todayCounted: false });
+    const on = stepsAchievements({ ...base, days: [...days.slice(0, 4), g('2026-09-30', 11000)] });
+    expect(on.streak).toEqual({ days: 4, start: '2026-09-27', todayCounted: true });
+  });
+
+  it('keeps the best day, and marks today when it beats a previous best', () => {
+    const days = [g('2026-09-23', 14200), g('2026-09-24', 8000), g('2026-09-30', 9000)];
+    expect(stepsAchievements({ ...base, days }).bestDay).toEqual({ date: '2026-09-23', steps: 14200 });
+    const beat = stepsAchievements({ ...base, days: [...days.slice(0, 2), g('2026-09-30', 15000)] });
+    expect(beat.bestDay).toEqual({ date: '2026-09-30', steps: 15000 });
+    expect(beat.todayIsBest).toBe(true);
+  });
+
+  it('never calls the first day with steps a record', () => {
+    const s = stepsAchievements({ ...base, days: [g('2026-09-30', 9000)] });
+    expect(s.bestDay).toEqual({ date: '2026-09-30', steps: 9000 });
+    expect(s.todayIsBest).toBe(false);
+  });
+
+  it('keeps the best finished week with at least 5 days of steps', () => {
+    const week13 = ['2026-09-13', '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'].map((d) => g(d, 8000));
+    const week20 = ['2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23'].map((d) => g(d, 12000));
+    const four = stepsAchievements({ ...base, days: [...week13, ...week20] });
+    expect(four.bestWeek).toEqual({ date: '2026-09-13', steps: 8000 });
+    expect(four.lastWeekIsBest).toBe(false);
+    const five = stepsAchievements({ ...base, days: [...week13, ...week20, g('2026-09-24', 12000)] });
+    expect(five.bestWeek).toEqual({ date: '2026-09-20', steps: 12000 });
+    expect(five.lastWeekIsBest).toBe(true);
   });
 });
