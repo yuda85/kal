@@ -37,3 +37,19 @@ describe('Week steps', () => {
     expect(card.querySelector('.tiers')!.textContent).toContain('מעל 13,000');
   });
 });
+
+describe('Week full week', () => {
+  it('scores the week on screen with a dot per day', async () => {
+    // Seeded Sunday 09-27: 320 kcal (under 800), 15,200 steps, weigh-in → not full. Today is Tuesday 09-29.
+    TestBed.configureTestingModule({ imports: [Week], providers: [{ provide: KalRepository, useValue: seededRepository() }] });
+    const state = TestBed.inject(KalState);
+    state.now.set(new Date('2026-09-29T10:00:00Z'));
+    state.start('u1');
+    const fixture = TestBed.createComponent(Week);
+    await fixture.whenStable();
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.fullweek')!;
+    expect(card.textContent).toContain('שבוע מלא');
+    expect(card.textContent).toContain('0/7');
+    expect([...card.querySelectorAll('.dots li')].map((d) => d.className)).toEqual(['partial', 'partial', 'open', 'open', 'open', 'open', 'open']);
+  });
+});

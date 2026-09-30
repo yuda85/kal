@@ -3,7 +3,7 @@ import { Component, computed, DestroyRef, effect, inject, signal, viewChild, typ
 import type { Chart } from 'chart.js';
 import { LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
 import { KalState } from '../../core/kal-state';
-import { addDays, reportGap, settingsOf, STEPS_GOAL, STEPS_GREAT, STEPS_LOW, trendSeries } from '../../domain';
+import { addDays, fullWeek, reportGap, settingsOf, STEPS_GOAL, STEPS_GREAT, STEPS_LOW, trendSeries } from '../../domain';
 import { fontsReady, weekChart } from '../../shared/charts';
 import { fmt, shortDate } from '../../shared/format';
 import { realityLine } from '../../shared/reality-line';
@@ -27,6 +27,18 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
           <h2><span class="num">{{ shortDate(v.summary.start) }}–{{ shortDate(v.summary.end) }}</span></h2>
           <button type="button" aria-label="שבוע הבא" [disabled]="v.summary.end >= today()" (click)="shift(7)"><svg lucideChevronLeft [size]="18"></svg></button>
         </header>
+
+        @if (full(); as f) {
+          <section class="card fullweek" [class.perfect]="f.perfect" [attr.aria-label]="'שבוע מלא ' + f.full + ' מתוך ' + f.of + ' ימים'">
+            <div>
+              <div class="muted small">{{ f.perfect ? '✦ שבוע מושלם' : 'שבוע מלא' }}</div>
+              <div class="num value">{{ f.full }}/{{ f.of }}</div>
+            </div>
+            <ol class="dots" aria-hidden="true">
+              @for (d of f.days; track d.date) { <li [class]="d.state"></li> }
+            </ol>
+          </section>
+        }
 
         <div class="kpis">
           <div class="card">
@@ -156,6 +168,12 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
     .seg { display: flex; gap: 4px; margin-block: 8px; }
     .seg button { flex: 1; }
     .seg .on { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+    .fullweek { display: flex; align-items: center; justify-content: space-between; margin-block: 12px; }
+    .fullweek.perfect { border-color: var(--great); }
+    .dots { display: flex; gap: 5px; list-style: none; margin: 0; padding: 0; }
+    .dots li { width: 14px; height: 14px; border-radius: 50%; border: 1.5px dashed var(--fg-muted); }
+    .dots li.full { background: var(--out); border-color: var(--out); border-style: solid; }
+    .dots li.partial { border: 1.5px solid var(--missing); }
     .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-block: 12px; }
     .kpis.three { grid-template-columns: repeat(3, 1fr); }
     .value { font-size: 20px; font-weight: 500; }
@@ -250,6 +268,11 @@ export class Week {
   protected readonly view = computed(() => {
     const input = this.input();
     return input ? weekView({ ...input, date: this.weekDate() }) : null;
+  });
+
+  protected readonly full = computed(() => {
+    const input = this.state.achievementInput();
+    return input ? fullWeek(input, this.weekDate()) : null;
   });
 
   /** The steps chart as a sentence, for screen readers. */
