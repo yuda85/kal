@@ -3,20 +3,31 @@ import { fmt } from '../../shared/format';
 
 const WEIGHT_LINE = 'לפי ממוצע השקילות השבועי.';
 
+/** A run of text; `num: true` segments render in `<span class="num">` (app-wide rule: numbers in `.num`). */
+export interface Segment {
+  text: string;
+  num: boolean;
+}
+
+const t = (text: string): Segment => ({ text, num: false });
+const n = (value: number): Segment => ({ text: fmt(value), num: true });
+
 /** §19 copy: logging and steps never say "on track"; only a weight milestone speaks about weight. */
-export function celebrationText(c: Celebration): { title: string; line: string } {
+export function celebrationText(c: Celebration): { title: Segment[]; line: Segment[] } {
   switch (c.kind) {
     case 'streak':
-      return { title: `${c.value} ימים ברצף!`, line: 'דיווחת כל יום. הדיווח הכן הוא מה שגורם לכל השאר לעבוד.' };
+      return { title: [n(c.value), t(' ימים ברצף!')], line: [t('דיווחת כל יום. הדיווח הכן הוא מה שגורם לכל השאר לעבוד.')] };
     case 'week':
-      return { title: 'שבוע מושלם!', line: `${c.value} מתוך ${c.value} ימים מלאים: אוכל, צעדים ושקילה.` };
+      return { title: [t('שבוע מושלם!')], line: [n(c.value), t(' מתוך '), n(c.value), t(' ימים מלאים: אוכל, צעדים ושקילה.')] };
     case 'steps-streak':
-      return { title: `${c.value} ימים ברצף מעל ${fmt(STEPS_GOAL)} צעדים!`, line: 'ממשיכים ללכת.' };
+      return { title: [n(c.value), t(' ימים ברצף מעל '), n(STEPS_GOAL), t(' צעדים!')], line: [t('ממשיכים ללכת.')] };
     case 'steps-day':
-      return { title: 'שיא צעדים חדש!', line: `${fmt(c.value)} צעדים היום.` };
+      return { title: [t('שיא צעדים חדש!')], line: [n(c.value), t(' צעדים היום.')] };
     case 'steps-week':
-      return { title: 'שבוע שיא בצעדים!', line: `ממוצע של ${fmt(c.value)} צעדים ביום.` };
+      return { title: [t('שבוע שיא בצעדים!')], line: [t('ממוצע של '), n(c.value), t(' צעדים ביום.')] };
     case 'weight':
-      return c.target ? { title: 'הגעת ליעד!', line: WEIGHT_LINE } : { title: `ירדת ${fmt(c.value)} ק״ג!`, line: WEIGHT_LINE };
+      return c.target
+        ? { title: [t('הגעת ליעד!')], line: [t(WEIGHT_LINE)] }
+        : { title: [t('ירדת '), n(c.value), t(' ק״ג!')], line: [t(WEIGHT_LINE)] };
   }
 }

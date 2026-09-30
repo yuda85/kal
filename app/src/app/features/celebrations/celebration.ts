@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, inject, viewChild, type AfterViewInit, type ElementRef } from '@angular/core';
 import { LucideFlag, LucideFlame, LucideFootprints, LucideSparkles, LucideTrophy } from '@lucide/angular';
 import { CelebrationService } from './celebration.service';
@@ -5,7 +6,8 @@ import { celebrationText } from './celebration.logic';
 
 @Component({
   selector: 'app-celebration',
-  imports: [LucideFlag, LucideFlame, LucideFootprints, LucideSparkles, LucideTrophy],
+  imports: [LucideFlag, LucideFlame, LucideFootprints, LucideSparkles, LucideTrophy, NgTemplateOutlet],
+  host: { '(document:keydown.escape)': 'celebrate.close()' },
   template: `
     @if (celebrate.due(); as items) {
       @if (items.length > 0) {
@@ -13,7 +15,7 @@ import { celebrationText } from './celebration.logic';
         <div class="confetti" aria-hidden="true">
           @for (i of pieces; track i) { <i [style.--a]="i * 22.5 + 'deg'"></i> }
         </div>
-        <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="celebration-title" (keydown.escape)="celebrate.close()">
+        <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="celebration-title">
           @if (items.length === 1) {
             <div class="icon" [class]="items[0].kind">
               @switch (items[0].kind) {
@@ -24,13 +26,16 @@ import { celebrationText } from './celebration.logic';
                 @default { <svg lucideFootprints [size]="32" aria-hidden="true"></svg> }
               }
             </div>
-            <h2 id="celebration-title">{{ text(items[0]).title }}</h2>
-            <p class="line">{{ text(items[0]).line }}</p>
+            <h2 id="celebration-title"><ng-container *ngTemplateOutlet="segs; context: { $implicit: text(items[0]).title }"></ng-container></h2>
+            <p class="line"><ng-container *ngTemplateOutlet="segs; context: { $implicit: text(items[0]).line }"></ng-container></p>
           } @else {
             <h2 id="celebration-title">כמה הישגים חדשים</h2>
             <ul class="list">
               @for (c of items; track c.key) {
-                <li><b>{{ text(c).title }}</b><span class="muted">{{ text(c).line }}</span></li>
+                <li>
+                  <b><ng-container *ngTemplateOutlet="segs; context: { $implicit: text(c).title }"></ng-container></b>
+                  <span class="muted"><ng-container *ngTemplateOutlet="segs; context: { $implicit: text(c).line }"></ng-container></span>
+                </li>
               }
             </ul>
           }
@@ -38,6 +43,9 @@ import { celebrationText } from './celebration.logic';
         </section>
       }
     }
+    <ng-template #segs let-list>
+      @for (s of list; track $index) {@if (s.num) {<span class="num">{{ s.text }}</span>} @else {{{ s.text }}}}
+    </ng-template>
   `,
   styles: `
     .scrim { position: fixed; inset: 0; background: rgb(0 0 0 / 0.6); z-index: 10; }
