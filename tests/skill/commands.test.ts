@@ -27,6 +27,13 @@ describe('read commands', () => {
     expect(out.workoutsCount).toBe(1);
   });
 
+  it('week: averages the steps entered on finished days', async () => {
+    // 09-27 has 15,200 Garmin steps; 09-28 has none (default steps never count); 09-29 is today
+    const out = (await run(['week', '2026-09-27'], { reader: fakeReader(), now: new Date('2026-09-29T10:00:00Z') })) as any;
+    expect(out.avgSteps).toBe(15200);
+    expect(out.stepsDays).toBe(1);
+  });
+
   it('profile: returns trend, targets and plan status', async () => {
     const out = (await run(['profile'], { reader: fakeReader(), now })) as any;
     expect(out.trendKg).toBe(85);

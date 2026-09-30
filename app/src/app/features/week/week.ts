@@ -6,7 +6,7 @@ import { addDays, reportGap, settingsOf, trendSeries } from '../../domain';
 import { fontsReady, weekChart } from '../../shared/charts';
 import { fmt, shortDate } from '../../shared/format';
 import { realityLine } from '../../shared/reality-line';
-import { canGoBack, canGoBackMonth, monthView, shiftMonth, weekView, type MissingInput, type WeekView } from './week.logic';
+import { canGoBack, canGoBackMonth, monthView, shiftMonth, STEPS_BOTTOM, STEPS_H, STEPS_W, weekView, type MissingInput, type WeekView } from './week.logic';
 
 const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weight: 'משקל' };
 
@@ -57,6 +57,32 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
         }
 
         <div class="chart"><canvas #chart aria-label="נכנס מול יצא לפי יום"></canvas></div>
+
+        <section class="card steps">
+          <div class="muted small">צעדים</div>
+          <div class="avg"><span class="num">{{ v.summary.avgSteps === null ? '—' : fmt(v.summary.avgSteps) }}</span> <small>ממוצע ליום</small></div>
+          @if (v.steps.mean) {
+            <div class="legend small muted"><i></i>{{ v.summary.stepsDays === 1 ? 'לפי יום אחד שהסתיים' : 'לפי ' + v.summary.stepsDays + ' ימים שהסתיימו' }}</div>
+          } @else {
+            <div class="small muted">עוד אין יום שהסתיים עם צעדים</div>
+          }
+          <svg [attr.viewBox]="'0 0 ' + SW + ' ' + SH" role="img" [attr.aria-label]="stepsLabel()">
+            <line class="base" x1="10" [attr.x2]="SW - 10" [attr.y1]="SB" [attr.y2]="SB" />
+            @for (s of v.steps.slots; track $index) {
+              @if (s.kind !== 'empty') {
+                <rect [class]="s.kind" [class.now]="s.current" [attr.x]="s.x - 11" [attr.y]="s.y" width="22" [attr.height]="s.height" rx="3" />
+                <text class="note" [class.missing]="s.kind === 'missing'" [class.now]="s.current" [attr.x]="s.x" [attr.y]="s.y - 5">{{ s.note }}</text>
+              }
+              <text class="label" [class.now]="s.current" [attr.x]="s.x" [attr.y]="SB + 16">{{ s.label }}</text>
+              @if (s.current && s.kind === 'bar') {
+                <text class="label" [attr.x]="s.x" [attr.y]="SB + 28">עד עכשיו</text>
+              }
+            }
+            @if (v.steps.mean; as m) {
+              <line class="mean" x1="10" [attr.x2]="SW - 10" [attr.y1]="m.y" [attr.y2]="m.y" />
+            }
+          </svg>
+        </section>
 
         <ul class="rows">
           @for (r of v.rows; track r.date) {
@@ -113,6 +139,20 @@ const MISSING_LABEL: Record<MissingInput, string> = { steps: 'צעדים', weigh
     .kpis.three { grid-template-columns: repeat(3, 1fr); }
     .value { font-size: 20px; font-weight: 500; }
     .chart { position: relative; height: 200px; margin-block: 12px; }
+    .steps { margin-block: 12px; }
+    .avg { font-size: 26px; font-weight: 500; line-height: 1.3; }
+    .avg small { font-size: 13px; font-weight: 400; color: var(--fg-muted); }
+    .legend i { display: inline-block; width: 14px; border-top: 1px dashed var(--fg-muted); vertical-align: middle; margin-inline-end: 4px; }
+    .steps svg { display: block; width: 100%; height: auto; direction: ltr; margin-top: 6px; }
+    .steps .base { stroke: var(--border); }
+    /* Steps are logged, not a verdict: neutral bars; only today stands out. */
+    .steps rect.bar { fill: var(--neutral-bar); }
+    .steps rect.bar.now { fill: var(--out); }
+    .steps rect.missing { fill: none; stroke: var(--missing); stroke-dasharray: 3 2; }
+    .steps .mean { stroke: var(--fg-muted); stroke-dasharray: 4 3; }
+    .steps text { font-size: 10px; fill: var(--fg-muted); text-anchor: middle; font-variant-numeric: tabular-nums; }
+    .steps text.missing { fill: var(--missing-fg); }
+    .steps text.now { fill: var(--fg); font-weight: 700; }
     .rows { list-style: none; margin: 0; padding: 0; }
     .rows li { padding-block: 6px; padding-inline-start: 8px; border-block-end: 1px solid var(--border); border-inline-start: 3px solid transparent; font-size: 13px; }
     /* Red: no food logged. Orange: steps or a weigh-in missing. Always with text, never color alone. */
@@ -145,6 +185,9 @@ export class Week {
   protected readonly canGoBackMonth = canGoBackMonth;
   protected readonly shiftMonth = shiftMonth;
   protected readonly weekdays = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+  protected readonly SW = STEPS_W;
+  protected readonly SH = STEPS_H;
+  protected readonly SB = STEPS_BOTTOM;
   protected readonly mode = signal<'week' | 'month'>('week');
   protected readonly month = signal(this.state.today().slice(0, 7));
   private readonly weekDate = signal(this.state.today());
@@ -172,6 +215,18 @@ export class Week {
   protected readonly view = computed(() => {
     const input = this.input();
     return input ? weekView({ ...input, date: this.weekDate() }) : null;
+  });
+
+  /** The steps chart as a sentence, for screen readers. */
+  protected readonly stepsLabel = computed(() => {
+    const v = this.view();
+    if (!v) return '';
+    const days = v.steps.slots
+      .filter((s) => s.kind !== 'empty')
+      .map((s) => `${s.label} ${s.note}${s.current ? ' עד עכשיו' : ''}`)
+      .join(', ');
+    const mean = v.summary.avgSteps === null ? '' : `. ממוצע ${fmt(v.summary.avgSteps)}`;
+    return `צעדים לפי יום: ${days || 'אין'}${mean}`;
   });
 
   protected readonly monthData = computed(() => {

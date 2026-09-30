@@ -147,6 +147,9 @@ export interface RangeSummary {
   avgOutKcal: number | null;
   avgDeficitKcal: number | null;
   avgProtein: number | null;
+  /** Mean steps of the finished days with entered steps (default steps and today never count). */
+  avgSteps: number | null;
+  stepsDays: number;
   workoutsCount: number;
   weightChangeKg: number | null;
   weightDeficitKcal: number | null;
@@ -172,6 +175,7 @@ function summarizeRange(start: string, end: string, input: RangeInput): RangeSum
   );
   const finished = days.filter((d) => d.date < input.today && d.date >= input.goal.startDate);
   const logged = finished.filter((d) => !d.imputed);
+  const stepped = finished.filter((d) => d.expenditure.stepsSource !== 'default');
   // Mean of real weigh-ins vs the previous range of the same length (§16); the trend stays for status and ETA.
   const weightChangeKg = weightChange(input.weighIns, start, end, input.today);
   const length = daysBetween(start, end) + 1;
@@ -185,6 +189,8 @@ function summarizeRange(start: string, end: string, input: RangeInput): RangeSum
     avgOutKcal: average(finished.map((d) => d.expenditure.out)),
     avgDeficitKcal: average(finished.map((d) => d.expenditure.out - d.countedKcal)),
     avgProtein: average(logged.map((d) => d.intake.protein)),
+    avgSteps: average(stepped.map((d) => d.expenditure.steps)),
+    stepsDays: stepped.length,
     workoutsCount: days.reduce((n, d) => n + d.expenditure.workouts.length, 0),
     weightChangeKg,
     weightDeficitKcal: weightChangeKg === null ? null : (-weightChangeKg * KCAL_PER_KG) / length,

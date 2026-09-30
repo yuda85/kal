@@ -193,6 +193,20 @@ describe('summarizeWeek', () => {
     const empty = summarizeWeek({ date: '2026-09-27', today: '2026-09-27', entries: [], days: [], profile: testProfile, goal: testGoal, weighIns: [] });
     expect(empty.avgInKcal).toBeNull();
     expect(empty.weightChangeKg).toBeNull();
+    expect(empty.avgSteps).toBeNull();
+    expect(empty.stepsDays).toBe(0);
+  });
+
+  it('averages the entered steps of finished days, leaving out default steps and today', () => {
+    const days = [
+      { date: '2026-09-27', garmin: { steps: 6420, workouts: [] } },
+      { date: '2026-09-28', manual: { steps: 9180 } },
+      { date: '2026-09-30', garmin: { steps: 4310, workouts: [] } },
+    ];
+    // 09-29 has no steps: its default 3,500 counts for calories, not for the average
+    const ww = summarizeWeek({ date: '2026-09-30', today: '2026-09-30', entries: weekEntries, days, profile: testProfile, goal: testGoal, weighIns: weekWeighIns });
+    expect(ww.avgSteps).toBe(7800);
+    expect(ww.stepsDays).toBe(2);
   });
 
   it('counts workouts and the weight-implied deficit', () => {

@@ -1,5 +1,5 @@
 import { makeEntry, testGoal, testProfile } from '../../../../../domain/testing.ts';
-import { canGoBack, canGoBackMonth, monthView, shiftMonth, weekView } from './week.logic';
+import { canGoBack, canGoBackMonth, monthView, shiftMonth, STEPS_BOTTOM, weekView } from './week.logic';
 
 describe('canGoBack', () => {
   it('stops at the start of the loaded 90-day window', () => {
@@ -77,6 +77,51 @@ describe('missing inputs', () => {
   it('asks for nothing before the goal started', () => {
     const v = weekView({ ...input, goal: { ...testGoal, startDate: '2026-09-29' } });
     expect(v.rows.map((r) => r.missing)).toEqual([[], [], ['steps', 'weight'], []]);
+  });
+});
+
+describe('steps chart', () => {
+  const input = {
+    date: '2026-09-30',
+    today: '2026-09-30',
+    entries: [],
+    days: [
+      { date: '2026-09-27', garmin: { steps: 6420, workouts: [] } },
+      { date: '2026-09-28', manual: { steps: 9180 } },
+      { date: '2026-09-30', garmin: { steps: 4310, workouts: [] } },
+    ],
+    profile: testProfile,
+    goal: testGoal,
+    weighIns: [],
+  };
+  const c = weekView(input).steps;
+
+  it('has a slot for each day, Sunday to Saturday', () => {
+    expect(c.slots.map((s) => s.label)).toEqual(['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']);
+    expect(c.slots[1].x - c.slots[0].x).toBeCloseTo(c.slots[2].x - c.slots[1].x, 10);
+  });
+
+  it('draws entered steps as bars from zero with the count above', () => {
+    expect(c.slots.map((s) => s.kind)).toEqual(['bar', 'bar', 'missing', 'bar', 'empty', 'empty', 'empty']);
+    expect(c.slots.map((s) => s.note)).toEqual(['6,420', '9,180', 'לא הוזן', '4,310', null, null, null]);
+    for (const s of c.slots.filter((s) => s.kind === 'bar')) expect(s.y + s.height).toBeCloseTo(STEPS_BOTTOM, 10);
+    expect(c.slots[1].height / c.slots[0].height).toBeCloseTo(9180 / 6420, 10);
+  });
+
+  it('marks today, whose steps are still coming in', () => {
+    expect(c.slots.map((s) => s.current)).toEqual([false, false, false, true, false, false, false]);
+  });
+
+  it('draws the mean of the finished days as a line', () => {
+    expect(c.mean?.steps).toBe(7800);
+    expect(c.mean!.y).toBeGreaterThan(c.slots[1].y);
+    expect(c.mean!.y).toBeLessThan(c.slots[0].y);
+  });
+
+  it('never asks for steps before the goal started', () => {
+    const early = weekView({ ...input, days: [], goal: { ...testGoal, startDate: '2026-09-29' } }).steps;
+    expect(early.slots.map((s) => s.kind)).toEqual(['empty', 'empty', 'missing', 'empty', 'empty', 'empty', 'empty']);
+    expect(early.mean).toBeNull();
   });
 });
 

@@ -554,3 +554,18 @@ users/{uid}/videos/{id}    { url, title, take, topic, addedAt }
 - Tip card: topic label, title, body, the action line (accent colour, with an arrow icon), a star button (44px, `aria-pressed`, "סמן כשמור" / "הסר משמורים").
 - Video card: a play icon tile, title, platform ("Instagram", "YouTube", "TikTok" or the host) and date, the owner's take as a quote, "צפייה" opens the link in a new tab, and a delete button with a confirm dialog. Videos have no stars.
 - Empty video state: "שלח לי בצ'אט קישור לסרטון והטייק שלך, ואני אוסיף אותו כאן."
+
+## 18. Steps on the week screen (added 2026-09-30)
+
+Owner request of 2026-09-30: see the daily steps average for a week and the steps of each day.
+
+### Data (domain)
+
+- `RangeSummary.avgSteps` = mean steps of the finished days (before today, on or after the goal start) whose steps were entered (`manual.steps ?? garmin.steps`). `stepsDays` = how many such days. A day without entered steps counts as the default 3,500 for calories only: it is a placeholder, not data, and never enters the average. Today is left out while its steps are still coming in. `null` / `0` when no day qualifies.
+- `read.ts week` and `month` carry both fields. Steps are still entered through the check-in or through Claude with an `activity` op (`steps`, with `date` for a past day).
+
+### Week screen
+
+- A "צעדים" card between the in/out chart and the day rows, for the week on screen.
+- Top: the average (26px/500) with "ממוצע ליום", then a dashed legend "לפי N ימים שהסתיימו" ("לפי יום אחד שהסתיים"); without a qualifying day: "—" and "עוד אין יום שהסתיים עם צעדים".
+- Chart (inline SVG): seven slots Sunday to Saturday labeled by day letter; one bar per day with entered steps, from zero, with the count above; the average as a dashed line. Bars are neutral; today's bar is emphasized and labeled "עד עכשיו". A finished day on or after the goal start without steps gets a short dashed orange outline with "לא הוזן" (the same rule as the row flag "חסר: צעדים"). Today without steps, future days and days before the goal start stay empty.

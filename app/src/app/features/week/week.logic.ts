@@ -1,6 +1,6 @@
 import { ENTRY_WINDOW_DAYS } from '../../core/kal-state';
 import { addDays, dateRange, summarizeMonth, summarizeWeek, type DaySummary, type MonthInput, type MonthSummary, type WeekInput, type WeekSummary } from '../../domain';
-import { dayLetter, shortDate } from '../../shared/format';
+import { dayLetter, fmt, shortDate } from '../../shared/format';
 
 export type MissingInput = 'steps' | 'weight';
 
@@ -14,8 +14,34 @@ export interface WeekRow {
   missing: MissingInput[];
 }
 
+export const STEPS_W = 300;
+export const STEPS_H = 150;
+export const STEPS_BOTTOM = 118;
+const STEPS_TOP = 22;
+const STEPS_LEFT = 10;
+const MISSING_STUB = 14;
+
+export interface StepSlot {
+  x: number;
+  label: string;
+  /** Today: its steps are still coming in. */
+  current: boolean;
+  /** bar: entered steps · missing: a finished day without steps · empty: today without steps, the future, before the goal. */
+  kind: 'bar' | 'missing' | 'empty';
+  y: number;
+  height: number;
+  note: string | null;
+}
+
+export interface StepsChart {
+  slots: StepSlot[];
+  /** The week's mean (finished days with entered steps) as a line. */
+  mean: { y: number; steps: number } | null;
+}
+
 export interface WeekView {
   summary: WeekSummary;
+  steps: StepsChart;
   rows: WeekRow[];
   labels: string[];
   inKcal: (number | null)[];
@@ -37,6 +63,26 @@ function rowOf(d: DaySummary, finished: boolean): WeekRow {
   };
 }
 
+function stepsChart(summary: WeekSummary, today: string, goalStart: string): StepsChart {
+  const byDate = new Map(summary.days.map((d) => [d.date, d]));
+  const entered = (date: string): number | null => {
+    const d = byDate.get(date);
+    return d && d.expenditure.stepsSource !== 'default' ? d.expenditure.steps : null;
+  };
+  const dates = dateRange(summary.start, summary.end);
+  const max = Math.max(1, ...dates.flatMap((d) => entered(d) ?? []));
+  const y = (steps: number) => STEPS_BOTTOM - (steps / max) * (STEPS_BOTTOM - STEPS_TOP);
+  const slot = (STEPS_W - 2 * STEPS_LEFT) / 7;
+  const slots = dates.map((date, i): StepSlot => {
+    const base = { x: STEPS_LEFT + slot * (i + 0.5), label: dayLetter(date), current: date === today };
+    const steps = entered(date);
+    if (steps !== null) return { ...base, kind: 'bar', y: y(steps), height: STEPS_BOTTOM - y(steps), note: fmt(steps) };
+    if (date < today && date >= goalStart) return { ...base, kind: 'missing', y: STEPS_BOTTOM - MISSING_STUB, height: MISSING_STUB, note: 'לא הוזן' };
+    return { ...base, kind: 'empty', y: STEPS_BOTTOM, height: 0, note: null };
+  });
+  return { slots, mean: summary.avgSteps === null ? null : { steps: summary.avgSteps, y: y(summary.avgSteps) } };
+}
+
 /** Entries older than the loaded window are not in memory, so older weeks would look empty. */
 export function canGoBack(weekStartDate: string, today: string): boolean {
   return addDays(weekStartDate, -7) >= addDays(today, -ENTRY_WINDOW_DAYS);
@@ -48,6 +94,7 @@ export function weekView(input: WeekInput): WeekView {
   const byDate = new Map(summary.days.map((d) => [d.date, d]));
   return {
     summary,
+    steps: stepsChart(summary, input.today, input.goal.startDate),
     rows: summary.days.map((d) => rowOf(d, d.date < input.today && d.date >= input.goal.startDate)),
     labels: dates.map((d) => `${dayLetter(d)} ${shortDate(d)}`),
     inKcal: dates.map((d) => byDate.get(d)?.countedKcal ?? null),
