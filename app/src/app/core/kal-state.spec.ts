@@ -4,6 +4,7 @@ import { KalRepository } from './repository';
 import { KalState } from './kal-state';
 
 function setup(repo: FakeRepository = seededRepository()) {
+  TestBed.resetTestingModule();
   TestBed.configureTestingModule({ providers: [{ provide: KalRepository, useValue: repo }] });
   const state = TestBed.inject(KalState);
   state.now.set(NOW);
@@ -94,5 +95,12 @@ describe('KalState', () => {
     const repo = seededRepository();
     repo.watchEntries = () => () => undefined;
     expect(setup(repo).entriesLoaded()).toBe(false);
+  });
+
+  it('tracks the celebrations document: null when it does not exist', () => {
+    expect(setup().celebrationState()).toBeNull();
+    const repo = seededRepository();
+    repo.celebrations = { seen: ['weight-g1-2'] };
+    expect(setup(repo).celebrationState()).toEqual({ seen: ['weight-g1-2'] });
   });
 });

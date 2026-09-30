@@ -1,5 +1,5 @@
 import { FISH_BALLS, testGoal, testProfile } from '../../../domain/testing.ts';
-import { EMPTY_TIP_STATE, type Day, type Entry, type Goal, type PlannedWrites, type Profile, type Recipe, type TipState, type WeighIn } from '../app/domain';
+import { EMPTY_TIP_STATE, type CelebrationState, type Day, type Entry, type Goal, type PlannedWrites, type Profile, type Recipe, type TipState, type WeighIn } from '../app/domain';
 import { KalRepository, type SavedVideo, type SetupWrite, type Unsubscribe } from '../app/core/repository';
 
 export const NOW = new Date('2026-09-27T10:00:00Z');
@@ -18,6 +18,9 @@ export class FakeRepository extends KalRepository {
   setups: SetupWrite[] = [];
   tipState: TipState = EMPTY_TIP_STATE;
   savedTipStates: TipState[] = [];
+  /** null: the document does not exist yet (first run). */
+  celebrations: CelebrationState | null = null;
+  savedCelebrations: CelebrationState[] = [];
   videos: SavedVideo[] = [];
   deletedVideos: string[] = [];
   writeMode: 'resolve' | 'hang' | 'permission-denied' = 'resolve';
@@ -80,6 +83,15 @@ export class FakeRepository extends KalRepository {
   }
   saveTipState(_uid: string, state: TipState): Promise<void> {
     this.savedTipStates.push(state);
+    return this.result();
+  }
+  watchCelebrations(_uid: string, cb: (state: CelebrationState | null) => void): Unsubscribe {
+    cb(this.celebrations);
+    return () => undefined;
+  }
+  saveCelebrations(_uid: string, state: CelebrationState): Promise<void> {
+    this.savedCelebrations.push(state);
+    this.celebrations = state;
     return this.result();
   }
   watchVideos(_uid: string, cb: (videos: SavedVideo[]) => void): Unsubscribe {

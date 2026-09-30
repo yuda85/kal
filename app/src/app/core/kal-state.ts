@@ -11,6 +11,7 @@ import {
   summarizeDay,
   type AchievementInput,
   type Achievements,
+  type CelebrationState,
   type Day,
   type DayEnergy,
   type DaySummary,
@@ -44,6 +45,8 @@ export class KalState {
   readonly recipes = signal<Recipe[]>([]);
   /** `undefined` until the tips document arrives. */
   readonly tipState = signal<TipState | undefined>(undefined);
+  /** `undefined` until the celebrations document arrives; `null` when it does not exist (first run). */
+  readonly celebrationState = signal<CelebrationState | null | undefined>(undefined);
   readonly videos = signal<SavedVideo[]>([]);
   readonly now = signal(new Date());
   /** Profile, goals, days and weigh-ins have arrived (the same moment `whenLoaded` resolves). */
@@ -141,6 +144,7 @@ export class KalState {
       }),
       this.repo.watchRecipes(uid, (r) => this.recipes.set(r)),
       this.repo.watchTipState(uid, (t) => this.tipState.set(t)),
+      this.repo.watchCelebrations(uid, (c) => this.celebrationState.set(c)),
       this.repo.watchVideos(uid, (v) => this.videos.set(v)),
     ];
     this.timer = setInterval(() => this.refreshNow(), 60_000);
@@ -166,6 +170,7 @@ export class KalState {
     this.weighIns.set([]);
     this.recipes.set([]);
     this.tipState.set(undefined);
+    this.celebrationState.set(undefined);
     this.videos.set([]);
     this.loaded.set(false);
     this.entriesLoaded.set(false);

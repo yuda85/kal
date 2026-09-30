@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { collection, deleteDoc, doc, onSnapshot, query, setDoc, where, writeBatch } from 'firebase/firestore';
-import { EMPTY_TIP_STATE, mergeManual, type Day, type Entry, type Goal, type PlannedWrites, type Profile, type Recipe, type TipState, type WeighIn } from '../domain';
+import { EMPTY_TIP_STATE, mergeManual, type CelebrationState, type Day, type Entry, type Goal, type PlannedWrites, type Profile, type Recipe, type TipState, type WeighIn } from '../domain';
 import { firestore } from './firebase';
 import { KalRepository, type SavedVideo, type SetupWrite, type Unsubscribe } from './repository';
 
@@ -86,6 +86,18 @@ export class FirestoreKalRepository extends KalRepository {
 
   saveTipState(uid: string, state: TipState): Promise<void> {
     return setDoc(this.tipsDoc(uid), state);
+  }
+
+  private celebrationsDoc(uid: string) {
+    return doc(this.db, 'users', uid, 'meta', 'celebrations');
+  }
+
+  watchCelebrations(uid: string, cb: (state: CelebrationState | null) => void): Unsubscribe {
+    return onSnapshot(this.celebrationsDoc(uid), (s) => cb(s.exists() ? { seen: ((s.data() as Partial<CelebrationState>).seen ?? []) } : null));
+  }
+
+  saveCelebrations(uid: string, state: CelebrationState): Promise<void> {
+    return setDoc(this.celebrationsDoc(uid), state);
   }
 
   watchVideos(uid: string, cb: (videos: SavedVideo[]) => void): Unsubscribe {
