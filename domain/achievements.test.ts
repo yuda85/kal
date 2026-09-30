@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fullWeek, loggingStreak, stepsAchievements, weightMilestones, type AchievementInput } from './achievements.ts';
+import { achievements, dueCelebrations, earnedCelebrations, fullWeek, loggingStreak, stepsAchievements, weightMilestones, type AchievementInput } from './achievements.ts';
 import { makeEntry, testGoal } from './testing.ts';
 
 // 2026-09-27 is a Sunday; today is Wednesday 2026-09-30.
@@ -166,5 +166,51 @@ describe('weightMilestones', () => {
   it('follows the mean back up', () => {
     const m = weightMilestones(testGoal, [{ date: '2026-09-22', kg: 85.9 }, { date: '2026-09-29', kg: 86.5 }], '2026-09-30');
     expect(m.reachedKg).toBe(2);
+  });
+});
+
+describe('celebrations', () => {
+  const g = (date: string, steps: number) => ({ date, garmin: { steps, workouts: [] } });
+  const eightDays = food('2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29');
+
+  it('earns every streak milestone of the current run, keyed by its start', () => {
+    const a = achievements({ ...base, entries: eightDays });
+    const keys = earnedCelebrations(a, 'g1', base.today).map((c) => c.key);
+    expect(keys).toContain('streak-7-2026-09-22');
+    expect(keys).not.toContain('streak-14-2026-09-22');
+  });
+
+  it('earns no streak celebration once the streak is capped', () => {
+    const a = achievements({ ...base, entries: eightDays, entriesFrom: '2026-09-22' });
+    expect(a.logging.capped).toBe(true);
+    expect(earnedCelebrations(a, 'g1', base.today).filter((c) => c.kind === 'streak')).toEqual([]);
+  });
+
+  it('earns weight milestones per goal, the target by name', () => {
+    const a = achievements({ ...base, goal: testGoal, weighIns: [{ date: '2026-09-29', kg: 79.5 }] });
+    const weight = earnedCelebrations(a, 'g1', base.today).filter((c) => c.kind === 'weight');
+    expect(weight.map((c) => c.key)).toEqual(['weight-g1-2', 'weight-g1-4', 'weight-g1-6', 'weight-g1-8', 'weight-g1-target']);
+    expect(weight.at(-1)!.target).toBe(true);
+  });
+
+  it('earns a record day and a steps streak', () => {
+    const days = [g('2026-09-27', 10500), g('2026-09-28', 11000), g('2026-09-29', 12000), g('2026-09-30', 12500)];
+    const kinds = earnedCelebrations(achievements({ ...base, days }), 'g1', base.today).map((c) => c.key);
+    expect(kinds).toContain('steps-streak-3-2026-09-27');
+    expect(kinds).toContain('steps-day-2026-09-30');
+  });
+
+  it('shows only unseen celebrations, the highest of each kind', () => {
+    const a = achievements({ ...base, goal: testGoal, weighIns: [{ date: '2026-09-29', kg: 85 }] });
+    const earned = earnedCelebrations(a, 'g1', base.today);
+    expect(dueCelebrations(earned, []).map((c) => c.key)).toEqual(['weight-g1-4']);
+    expect(dueCelebrations(earned, ['weight-g1-2', 'weight-g1-4'])).toEqual([]);
+  });
+
+  it('celebrates a new run again', () => {
+    const run1 = earnedCelebrations(achievements({ ...base, entries: eightDays }), 'g1', base.today);
+    const later = food('2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06');
+    const run2 = earnedCelebrations(achievements({ ...base, today: '2026-10-07', entries: later }), 'g1', '2026-10-07');
+    expect(dueCelebrations(run2, run1.map((c) => c.key)).map((c) => c.key)).toEqual(['streak-7-2026-09-30']);
   });
 });

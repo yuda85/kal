@@ -192,3 +192,70 @@ export function weightMilestones(goal: Goal, weighIns: WeighIn[], today: string)
     next: nextKg === undefined ? null : { kg: nextKg, target: nextKg === span, leftKg: nextKg - (lostKg ?? 0) },
   };
 }
+
+export interface Achievements {
+  logging: LoggingStreak;
+  thisWeek: FullWeek;
+  lastWeek: FullWeek;
+  steps: StepsAchievements;
+  weight: WeightMilestones;
+}
+
+export function achievements(input: AchievementInput): Achievements {
+  return {
+    logging: loggingStreak(input),
+    thisWeek: fullWeek(input, input.today),
+    lastWeek: fullWeek(input, addDays(input.today, -7)),
+    steps: stepsAchievements(input),
+    weight: weightMilestones(input.goal, input.weighIns, input.today),
+  };
+}
+
+export const STREAK_MILESTONES = [7, 14, 30, 60];
+export const STEPS_STREAK_MILESTONES = [3, 7, 14, 30];
+
+export type CelebrationKind = 'weight' | 'week' | 'streak' | 'steps-streak' | 'steps-week' | 'steps-day';
+
+export interface Celebration {
+  key: string;
+  kind: CelebrationKind;
+  /** kg, days, steps or the week's day count, by kind. */
+  value: number;
+  target: boolean;
+}
+
+/** `users/{uid}/meta/celebrations`: the keys already shown. */
+export interface CelebrationState {
+  seen: string[];
+}
+
+/** Everything the data earns right now, ascending within each kind (§19). */
+export function earnedCelebrations(a: Achievements, goalId: string, today: string): Celebration[] {
+  const out: Celebration[] = [];
+  const add = (kind: CelebrationKind, key: string, value: number, target = false) => out.push({ kind, key, value, target });
+  const { weight, logging, steps } = a;
+  for (const kg of weight.milestones) {
+    if (weight.reachedKg === null || kg > weight.reachedKg) break;
+    const target = weight.reachedTarget && kg === weight.milestones.at(-1);
+    add('weight', `weight-${goalId}-${target ? 'target' : kg}`, kg, target);
+  }
+  for (const w of [a.lastWeek, a.thisWeek]) if (w.perfect) add('week', `week-${w.start}`, w.of);
+  // A capped run's start moves every day; it would celebrate again daily.
+  if (logging.start !== null && !logging.capped) {
+    for (const n of STREAK_MILESTONES) if (logging.days >= n) add('streak', `streak-${n}-${logging.start}`, n);
+  }
+  if (steps.streak.start !== null) {
+    for (const n of STEPS_STREAK_MILESTONES) if (steps.streak.days >= n) add('steps-streak', `steps-streak-${n}-${steps.streak.start}`, n);
+  }
+  if (steps.lastWeekIsBest && steps.bestWeek) add('steps-week', `steps-week-${steps.bestWeek.date}`, steps.bestWeek.steps);
+  if (steps.todayIsBest && steps.bestDay) add('steps-day', `steps-day-${today}`, steps.bestDay.steps);
+  return out;
+}
+
+/** What to show: earned and not seen, only the highest of each kind. */
+export function dueCelebrations(earned: Celebration[], seen: string[]): Celebration[] {
+  const seenKeys = new Set(seen);
+  const top = new Map<CelebrationKind, Celebration>();
+  for (const c of earned) if (!seenKeys.has(c.key)) top.set(c.kind, c);
+  return earned.filter((c) => top.get(c.kind) === c);
+}
