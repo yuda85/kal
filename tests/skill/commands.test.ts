@@ -34,6 +34,17 @@ describe('read commands', () => {
     expect(out.stepsDays).toBe(1);
   });
 
+  it('achievements: returns streaks, the full week, step records and weight milestones', async () => {
+    // fake reader: 320 kcal and 15,200 Garmin steps on 09-27, weigh-in 85 kg on 09-27, goal 90 → 80
+    const out = (await run(['achievements'], { reader: fakeReader(), now: new Date('2026-09-28T10:00:00Z') })) as any;
+    expect(out.logging.days).toBe(0);
+    expect(out.steps.bestDay).toEqual({ date: '2026-09-27', steps: 15200 });
+    expect(out.steps.streak.days).toBe(1);
+    expect(out.weight.reachedKg).toBe(4);
+    expect(out.weight.next).toEqual({ kg: 6, target: false, leftKg: 1 });
+    expect(out.thisWeek.of).toBe(7);
+  });
+
   it('profile: returns trend, targets and plan status', async () => {
     const out = (await run(['profile'], { reader: fakeReader(), now })) as any;
     expect(out.trendKg).toBe(85);

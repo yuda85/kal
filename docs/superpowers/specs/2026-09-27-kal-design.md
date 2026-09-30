@@ -579,7 +579,7 @@ Owner request of 2026-09-30: more engagement through gamification. Principle: re
 ### Rules (`domain/achievements.ts`)
 
 - **Logged day:** at least `lowDayThresholdKcal` (800) of food, the same line as the missing-day penalty.
-- **Logging streak:** walk back from yesterday. A logged day adds 1. A day that is not logged is absorbed by that week's single grace day (Sunday to Saturday) when it is still unused, and adds nothing; otherwise the streak stops there. Today adds 1 once logged and never breaks the streak. The streak never reaches before the goal start. When it reaches the start of the loaded entry window (`ENTRY_WINDOW_DAYS`, 90), it reads "90+". Output: `{ days, capped, graceUsedThisWeek, todayCounted }`.
+- **Logging streak:** walk back from yesterday. A logged day adds 1. A day that is not logged is absorbed by that week's single grace day (Sunday to Saturday) when it is still unused, and adds nothing; otherwise the streak stops there. Today adds 1 once logged and never breaks the streak. The streak never reaches before the goal start. When it reaches the start of the loaded entry window (`ENTRY_WINDOW_DAYS`, 90), it reads "N+". Output: `{ days, capped, graceUsedThisWeek, todayCounted }`.
 - **Full day:** logged food, entered steps (`manual.steps ?? garmin.steps`) and a real weigh-in: a finished day with no flag on the week screen. **Full week:** full days out of the week's days on or after the goal start; today counts once it is full. Perfect week: every such day full.
 - **10K streak:** consecutive days with entered steps ≥ `STEPS_GOAL`, no grace; walk back from yesterday; today adds 1 once it passes the goal and does not break the streak before that.
 - **Step records:** best day = the most entered steps on one day, all history. Best week = the highest mean of entered steps over a finished week with at least 5 days of entered steps. A day or week sets a new record only when a previous record exists.
@@ -588,19 +588,19 @@ Owner request of 2026-09-30: more engagement through gamification. Principle: re
 
 ### Screens
 
-- **Today:** a streak chip first in the top row (before the weigh-in and "סגירת יום"): flame icon, the count, "ימים". Today counted: coloured flame, solid outline. Not yet: muted flame, dashed outline and "· היום?". Not a button; its `aria-label` is a sentence ("רצף דיווח 12 ימים, היום עוד לא דווח").
+- **Today:** a streak chip first in the top row (before the weigh-in and "סגירת יום"): flame icon, the count, "ימים", shown from a 1-day streak. Today counted: coloured flame, solid outline. Not yet: muted flame, dashed outline and "· היום?". Not a button; its `aria-label` is a sentence ("רצף דיווח 12 ימים, היום עוד לא דווח").
 - **Week:** a "שבוע מלא N/M" card under the date header for the week on screen (M = its days on or after the goal start, 7 after the first week), with seven dots from Sunday: full = filled `--out`, finished and not full = `--missing` outline, future or before the goal = dashed. A perfect week gets a `--great` border and "✦ שבוע מושלם".
 - **Steps card (§18):** three small stats under the chart, above the tier legend: "רצף 10K" (days), "שיא יום" (steps and date), "שיא שבוע" (mean and week start). "—" without a record.
 - **Weight:** a tick on the progress bar at every 2 kg (reached `--out`, others muted), and under it "אבן הדרך הבאה: −4 ק״ג · עוד 0.7" ("הגעת ליעד" at the target).
 
 ### Celebrations
 
-- Each achievement celebrates once, by key: logging streak 7, 14, 30, 60, 90 (`streak-<n>-<run start>`), perfect week (`week-<start>`), 10K streak 3, 7, 14, 30 (`steps-streak-<n>-<run start>`), new best day (`steps-day-<date>`, as soon as today passes the previous best), new best week (`steps-week-<start>`, once the week is over), weight milestone (`weight-<goal id>-<kg>`, and `weight-<goal id>-target`). A new run can celebrate its own milestones.
-- A dialog like the daily tip: scrim, centred card, a large icon in a coloured circle (flame, footprints, flag, sparkle), a title ("12 ימים ברצף!"), one line, and "יאללה" (Escape also closes). Several new achievements at once share one dialog as a list.
+- Each achievement celebrates once, by key: logging streak 7, 14, 30, 60 (no streak celebration once the streak is capped: its run start moves every day), perfect week (`week-<start>`), 10K streak 3, 7, 14, 30 (`steps-streak-<n>-<run start>`), new best day (`steps-day-<date>`, as soon as today passes the previous best), new best week (`steps-week-<start>`, once the week is over), weight milestone (`weight-<goal id>-<kg>`, and `weight-<goal id>-target`). A new run can celebrate its own milestones.
+- A dialog like the daily tip: scrim, centred card, a large icon in a coloured circle (flame, footprints, flag, sparkle), a title ("12 ימים ברצף!"), one line, and "יאללה" (Escape also closes). Several new achievements at once share one dialog as a list. A milestone ladder (weight, logging streak, 10K streak) shows only its highest new step; each new perfect week, best week and best day shows.
 - A confetti burst under 1 s, CSS only (transform and opacity), none under `prefers-reduced-motion`: a recorded deviation from the 150–250 ms motion rule.
 - It opens when the app opens or comes back, and as soon as an achievement becomes true while the app is open. Order: the daily tip first, then the celebration, then the 22:00 check-in.
 - First run: when the celebrations document does not exist, every achievement already true is saved as seen without a dialog, so the update does not open a flood of dialogs.
-- State: `users/{uid}/state/celebrations` = `{ seen: string[] }`, written by the app only (the existing rules cover the path). Claude never writes it.
+- State: `users/{uid}/meta/celebrations` = `{ seen: string[] }`, written by the app only (the existing rules cover the path). Claude never writes it.
 
 ### Claude
 

@@ -17,6 +17,7 @@ node .claude/skills/kal/scripts/read.ts day [date]     # intake, out breakdown, 
 node .claude/skills/kal/scripts/read.ts week [date]    # the Sun–Sat week containing date: averages (avgSteps: finished days with entered steps), missing days, stepsEntered / weighedIn per day
 node .claude/skills/kal/scripts/read.ts month [YYYY-MM] # workouts, penalized days, logged vs weight deficit
 node .claude/skills/kal/scripts/read.ts recipes        # saved recipes with per-unit / per-100 g values
+node .claude/skills/kal/scripts/read.ts achievements        # logging streak (grace, today), this/last full week, 10K streak, step records, weight milestones
 ```
 
 Build links by passing the JSON on stdin through a **quoted heredoc** — never as a single-quoted argument, because Hebrew names often contain an ASCII apostrophe (קוטג', צ'יפס, ג'חנון) that would break the shell quoting:
@@ -62,6 +63,7 @@ Collect ingredients with raw grams and the yield: number of units (with a unit n
 
 - Every `activity` op uses `"id":"checkin"`, with `"date"` for a past day. `steps` replaces the day's steps; `workouts` replaces the day's check-in workouts, so send the day's full list (run `read.ts day <date>` first and keep the manual workouts already there); `[]` removes them; an op without `workouts` keeps them. An op with `steps` closes the day (the app stops its 22:00 prompt); a workout logged during the day without steps does not. `kcal`: Garmin's "Active calories" when the owner has them (no `durationMin`); otherwise the workout's total calories plus `durationMin`, and the resting share (already in BMR) is subtracted. For a walk or run also send the workout's `steps` from Garmin, so they are not counted again in the day's steps. Types: Upper, Lower, Push, Pull, Legs, Full body, Cardio, אחר.
 - A day burns BMR × 1.2 (digestion and daily movement, including 3,500 steps); steps above 3,500 and workouts add to it, fewer steps take away. A day without steps counts as 3,500. The owner's steps goal is 10,000 (`STEPS_GOAL`); the week screen colours each day under 4,500 / under 10,000 / goal / over 13,000. That grades steps only, never weight progress. A finished day with less than 800 kcal of food counts as 3,200 (the owner's penalty rule); logging real food removes it.
+- Achievements (§19): you may name the logging streak or how close a record or milestone is ("if you log today, it is day 7"; "2,300 steps to your best day"). A logging or steps achievement never means "on track"; only a weight milestone speaks about weight.
 - A day without a weigh-in carries the previous weight into the trend (computed, never stored); a `weight` op for that date replaces it. `weighedIn` tells whether a day has a real weigh-in.
 - Macro targets follow the day's calorie target: protein 1.8 g per kg of trend, fat 30% of the calories, carbs the rest; the owner's constraints win.
 

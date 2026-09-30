@@ -1,8 +1,10 @@
 import {
+  achievements,
   addDays,
   bmr,
   computeRecipe,
   dateRange,
+  ENTRY_WINDOW_DAYS,
   eta,
   GAP_WINDOW_DAYS,
   isValidDate,
@@ -117,6 +119,20 @@ async function recipes(deps: Deps, today: string) {
   });
 }
 
+async function achievementsOf(deps: Deps, today: string) {
+  const from = addDays(today, -ENTRY_WINDOW_DAYS);
+  const d = await loadData(deps.reader, from, today);
+  return achievements({
+    today,
+    goal: d.goal,
+    entries: d.entries,
+    days: d.days,
+    weighIns: d.weighIns,
+    lowDayThresholdKcal: settingsOf(d.profile).lowDayThresholdKcal,
+    entriesFrom: from,
+  });
+}
+
 export async function run(args: string[], deps: Deps): Promise<unknown> {
   const [command = 'day', arg] = args;
   const today = localDate(deps.now);
@@ -138,7 +154,9 @@ export async function run(args: string[], deps: Deps): Promise<unknown> {
       return week(deps, date, today);
     case 'recipes':
       return recipes(deps, today);
+    case 'achievements':
+      return achievementsOf(deps, today);
     default:
-      throw new Error(`unknown command: ${command}. Use profile | day [date] | week [date] | month [YYYY-MM] | recipes`);
+      throw new Error(`unknown command: ${command}. Use profile | day [date] | week [date] | month [YYYY-MM] | recipes | achievements`);
   }
 }
