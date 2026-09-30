@@ -1,4 +1,4 @@
-import { staleSyncHours, targetBreakdown } from './today.logic';
+import { staleSyncHours, streakChip, targetBreakdown } from './today.logic';
 
 const summary = (over: Record<string, unknown> = {}) =>
   ({
@@ -53,5 +53,19 @@ describe('today logic', () => {
     expect(b.target).toBe(1800);
     expect(b.burn - b.deficit).toBe(b.target);
     expect(b.lines.reduce((sum, l) => sum + l.kcal, 0)).toBe(b.burn);
+  });
+
+  describe('streakChip', () => {
+    const s = { days: 12, capped: false, graceUsedThisWeek: false, todayCounted: true, start: '2026-09-19' };
+
+    it('shows the count and whether today already counts', () => {
+      expect(streakChip(s)).toEqual({ count: '12', today: true, label: 'רצף דיווח 12 ימים, היום כבר דווח' });
+      expect(streakChip({ ...s, todayCounted: false })!.label).toBe('רצף דיווח 12 ימים, היום עוד לא דווח');
+    });
+
+    it('marks a capped streak with a plus, and hides an empty one', () => {
+      expect(streakChip({ ...s, capped: true, days: 85 })!.count).toBe('85+');
+      expect(streakChip({ ...s, days: 0, todayCounted: false, start: null })).toBeNull();
+    });
   });
 });

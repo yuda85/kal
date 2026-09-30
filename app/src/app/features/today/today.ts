@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject } from '@angular/core';
-import { LucideMoon, LucidePlus, LucideScale } from '@lucide/angular';
+import { LucideFlame, LucideMoon, LucidePlus, LucideScale } from '@lucide/angular';
 import { KalState } from '../../core/kal-state';
 import { settingsOf } from '../../domain';
 import { BulletBar } from '../../shared/bullet-bar';
@@ -10,14 +10,19 @@ import { CheckInService } from '../checkin/checkin.service';
 import { DailyTipService } from '../tips/daily-tip.service';
 import { QuickAddService } from './quick-add.service';
 import { TargetCard } from './target-card';
-import { staleSyncHours, targetBreakdown } from './today.logic';
+import { staleSyncHours, streakChip, targetBreakdown } from './today.logic';
 
 @Component({
   selector: 'app-today',
-  imports: [BulletBar, LucidePlus, LucideScale, LucideMoon, TargetCard],
+  imports: [BulletBar, LucidePlus, LucideScale, LucideMoon, LucideFlame, TargetCard],
   template: `
     @if (summary(); as s) {
       <div class="row top">
+        @if (streak(); as k) {
+          <span class="chip streak" [class.pending]="!k.today" role="img" [attr.aria-label]="k.label">
+            <svg lucideFlame [size]="16" aria-hidden="true"></svg><span class="num">{{ k.count }}</span> ימים@if (!k.today) {<span> · היום?</span>}
+          </span>
+        }
         <button type="button" class="chip" [class.missing]="!weighIn()" (click)="quickAdd.open('weight')">
           <svg lucideScale [size]="16"></svg>
           @if (weighIn(); as w) { <span class="num">{{ fmt(w.kg, 1) }}</span> ק״ג } @else { + שקילה היום }
@@ -85,6 +90,10 @@ import { staleSyncHours, targetBreakdown } from './today.logic';
     .top { margin-block: 8px; }
     .chip { min-height: 44px; border-radius: 999px; padding: 0 12px; display: inline-flex; gap: 6px; align-items: center; }
     .chip.missing { border-color: var(--primary); color: var(--primary); }
+    .chip.streak { border: 1px solid var(--border); background: var(--card); }
+    .chip.streak svg { color: var(--in); }
+    .chip.streak.pending { border-style: dashed; color: var(--fg-muted); }
+    .chip.streak.pending svg { color: var(--fg-muted); }
     .reality { margin-block: 8px 0; }
     .entries { list-style: none; margin: 12px 0 0; padding: 0; border-block-start: 1px solid var(--border); }
     .entry { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; width: 100%; border: none;
@@ -103,6 +112,10 @@ export class Today {
   protected readonly checkin = inject(CheckInService);
   private readonly dailyTip = inject(DailyTipService);
   protected readonly weighIn = this.state.todayWeighIn;
+  protected readonly streak = computed(() => {
+    const a = this.state.achievements();
+    return a ? streakChip(a.logging) : null;
+  });
   protected readonly reality = computed(() => realityLine(this.state.reality()));
   protected readonly breakdown = computed(() => {
     const s = this.summary();

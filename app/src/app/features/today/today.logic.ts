@@ -1,4 +1,4 @@
-import type { DaySummary } from '../../domain';
+import type { DaySummary, LoggingStreak } from '../../domain';
 import { fmt } from '../../shared/format';
 
 export const STALE_SYNC_HOURS = 6;
@@ -61,4 +61,17 @@ export function targetBreakdown(s: DaySummary, defaultSteps: number, paceKgPerWe
     lines,
     summary: `יעד לאכילה ${fmt(target)}: שורף היום ${fmt(burn)}, פחות גירעון ${fmt(deficit)}${clampText}`,
   };
+}
+
+export interface StreakChip {
+  count: string;
+  today: boolean;
+  label: string;
+}
+
+/** The Today chip (§19); null without a streak. */
+export function streakChip(s: LoggingStreak): StreakChip | null {
+  if (s.days === 0) return null;
+  const count = s.capped ? `${s.days}+` : String(s.days);
+  return { count, today: s.todayCounted, label: `רצף דיווח ${count} ימים, ${s.todayCounted ? 'היום כבר דווח' : 'היום עוד לא דווח'}` };
 }
